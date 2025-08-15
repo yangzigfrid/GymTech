@@ -559,11 +559,12 @@
                         });
                     }
                     closeWorkoutModal(); // Fecha o modal após salvar
-                    await loadUserData(currentUser); // Recarrega os dados para atualizar a lista de treinos
-                    if (currentView === 'dayDetail') { // Força a re-renderização da tela de detalhes do dia
+                    // Recarrega os dados e renderiza a tela correta para mostrar as atualizações
+                    await loadUserData(currentUser);
+                    if (currentView === 'dayDetail') {
                         renderDayDetailScreen();
                     } else {
-                        renderMainApp(); // Ou a tela principal, se for o caso
+                        renderMainApp();
                     }
                 } catch (error) {
                     console.error("Erro ao salvar treino:", error);
@@ -609,11 +610,12 @@
                 isConfirmationModalOpen = false; // Fecha o modal de confirmação
                 workoutToDelete = null; // Limpa a referência do treino a ser excluído
                 renderConfirmationModal(); // Chama diretamente a renderização do modal para fechar
-                await loadUserData(currentUser); // Recarrega os dados para atualizar a lista de treinos
-                if (currentView === 'dayDetail') { // Força a re-renderização da tela de detalhes do dia
+                // Recarrega os dados e renderiza a tela correta para mostrar as atualizações
+                await loadUserData(currentUser);
+                if (currentView === 'dayDetail') {
                     renderDayDetailScreen();
                 } else {
-                    renderMainApp(); // Ou a tela principal, se for o caso
+                    renderMainApp();
                 }
             }
 
@@ -665,8 +667,9 @@
 
                     diet = dietPlan; // Atualiza o estado local
                     closeDietModal(); // Fecha o modal
-                    await loadUserData(currentUser); // Recarrega os dados para atualizar a exibição
-                    renderMainApp(); // Sempre renderiza a tela principal após salvar a dieta
+                    // Recarrega os dados e renderiza a tela principal para mostrar as atualizações
+                    await loadUserData(currentUser);
+                    renderMainApp();
                 } catch (error) {
                     console.error("Erro ao salvar dieta:", error);
                     showTempMessage('Erro ao salvar dieta. Tente novamente.', 'error');
@@ -719,8 +722,9 @@
 
                     weight = newWeightValue; // Atualiza o estado local com o último peso
                     closeWeightModal(); // Fecha o modal
-                    await loadUserData(currentUser); // Recarrega os dados para atualizar a exibição
-                    renderMainApp(); // Sempre renderiza a tela principal após salvar o peso
+                    // Recarrega os dados e renderiza a tela principal para mostrar as atualizações
+                    await loadUserData(currentUser);
+                    renderMainApp();
                 } catch (error) {
                     console.error("Erro ao salvar peso:", error);
                     showTempMessage('Erro ao salvar peso. Tente novamente.', 'error');
