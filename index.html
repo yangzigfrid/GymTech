@@ -941,12 +941,12 @@
                     renderApp(); // Renderiza a aplicação (tela de login ou principal)
                 });
 
-                // Adiciona o listener de delegação de eventos ao appRoot UMA ÚNICA VEZ
-                appRoot.addEventListener('click', (event) => { // Usando addEventListener para melhor prática
+                // Adiciona o listener de delegação de eventos ao document.body UMA ÚNICA VEZ
+                document.body.addEventListener('click', (event) => { // Alterado de appRoot para document.body
                     const target = event.target;
 
                     // Usando closest() para encontrar o botão correspondente, mesmo se o clique for em um filho
-                    const clickedButton = target.closest('.add-workout-btn, .edit-workout-btn, .delete-workout-btn, #logout-btn, #clear-error-btn, #open-diet-modal-btn, #open-weight-modal-btn');
+                    const clickedButton = target.closest('.add-workout-btn, .edit-workout-btn, .delete-workout-btn, #logout-btn, #clear-error-btn, #open-diet-modal-btn, #open-weight-modal-btn, #toggle-auth-mode-btn'); // Adicionado #toggle-auth-mode-btn
 
                     if (clickedButton) {
                         if (clickedButton.matches('.add-workout-btn')) {
@@ -966,6 +966,9 @@
                             openDietModal();
                         } else if (clickedButton.matches('#open-weight-modal-btn')) {
                             openWeightModal();
+                        } else if (clickedButton.matches('#toggle-auth-mode-btn')) { // Lida com o botão de alternar login/cadastro
+                            isLoginMode = !isLoginMode;
+                            renderApp();
                         }
                     }
                 });
