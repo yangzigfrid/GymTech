@@ -845,25 +845,27 @@
                         </div>
                     </section>
 
-                    <section class="mb-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-6 shadow-xl transform hover:scale-102 transition-all duration-300">
-                        <h2 class="text-3xl font-bold text-white text-center mb-4">Sua Dieta</h2>
-                        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-inner min-h-[100px] flex items-center justify-center">
-                            ${diet ? `<p class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap text-lg text-center">${diet}</p>` : `<p class="text-gray-500 dark:text-gray-400 italic text-lg text-center">Nenhuma dieta adicionada ainda.</p>`}
-                        </div>
-                        <button id="open-diet-modal-btn" class="mt-6 w-full bg-white text-emerald-700 hover:bg-gray-100 font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105">
-                            ${diet ? 'Editar Dieta' : 'Adicionar Dieta'}
-                        </button>
-                    </section>
+                    <div class="flex flex-col md:flex-row gap-6 w-full justify-center">
+                        <section class="mb-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-6 shadow-xl transform hover:scale-102 transition-all duration-300 flex-1">
+                            <h2 class="text-3xl font-bold text-white text-center mb-4">Sua Dieta</h2>
+                            <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-inner min-h-[100px] flex items-center justify-center">
+                                ${diet ? `<p class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap text-lg text-center">${diet}</p>` : `<p class="text-gray-500 dark:text-gray-400 italic text-lg text-center">Nenhuma dieta adicionada ainda.</p>`}
+                            </div>
+                            <button id="open-diet-modal-btn" class="mt-6 w-full bg-white text-emerald-700 hover:bg-gray-100 font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105">
+                                ${diet ? 'Editar Dieta' : 'Adicionar Dieta'}
+                            </button>
+                        </section>
 
-                    <section class="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-2xl p-6 shadow-xl transform hover:scale-102 transition-all duration-300">
-                        <h2 class="text-3xl font-bold text-white text-center mb-4">Seu Peso</h2>
-                        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-inner min-h-[80px] flex items-center justify-center">
-                            ${weight ? `<p class="text-gray-700 dark:text-gray-300 text-5xl font-extrabold">${weight} kg</p>` : `<p class="text-gray-500 dark:text-gray-400 italic text-lg text-center">Nenhum peso registrado ainda.</p>`}
-                        </div>
-                        <button id="open-weight-modal-btn" class="mt-6 w-full bg-white text-indigo-700 hover:bg-gray-100 font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105">
-                            ${weight ? 'Atualizar Peso' : 'Registrar Peso'}
-                        </button>
-                    </section>
+                        <section class="mb-12 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-2xl p-6 shadow-xl transform hover:scale-102 transition-all duration-300 flex-1">
+                            <h2 class="text-3xl font-bold text-white text-center mb-4">Seu Peso</h2>
+                            <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-inner min-h-[80px] flex items-center justify-center">
+                                ${weight ? `<p class="text-gray-700 dark:text-gray-300 text-5xl font-extrabold">${weight} kg</p>` : `<p class="text-gray-500 dark:text-gray-400 italic text-lg text-center">Nenhum peso registrado ainda.</p>`}
+                            </div>
+                            <button id="open-weight-modal-btn" class="mt-6 w-full bg-white text-indigo-700 hover:bg-gray-100 font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105">
+                                ${weight ? 'Atualizar Peso' : 'Registrar Peso'}
+                            </button>
+                        </section>
+                    </div>
                 `;
 
                 // Renderiza os modais se estiverem abertos
