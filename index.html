@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Diário de Treinos</title>
+    <!-- Tailwind CSS CDN para estilização rápida e responsiva -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fonte Inter para um visual moderno e limpo -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        /* Estilos base e fontes */
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            background-image: url('https://i.postimg.cc/Y4rqjL3K/background-gym.jpg'); /* Imagem de fundo da academia */
+            background-size: cover;
+            background-position: center;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #1a202c; /* Cor padrão do texto */
+        }
+        .dark body { /* Estilo para possível modo escuro (não implementado, mas boa prática) */
+            color: #f7fafc;
+        }
+        /* Overlay escuro sobre a imagem de fundo para melhorar a legibilidade do texto */
+        .bg-overlay {
+            position: absolute;
+            inset: 0;
+            background-color: black;
+            opacity: 0.6;
+            z-index: 0; /* Garante que fique atrás do conteúdo principal */
+        }
+        /* Animação personalizada para o título principal */
+        @keyframes pulse-fade {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.8;
+                transform: scale(1.02);
+            }
+        }
+        .animate-pulse-fade {
+            animation: pulse-fade 3s ease-in-out infinite;
+        }
+        /* Animação para modais (pop-ups) */
+        @keyframes fade-in-up {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-fade-in-up {
+            animation: fade-in-up 0.3s ease-out forwards;
+        }
+        /* Animação para mensagens temporárias (erros/sucesso) */
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        .animate-fade-in {
+            animation: fade-in 0.3s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+    <div class="bg-overlay"></div>
+    <div id="app-root" class="relative z-10 w-full max-w-4xl bg-white dark:bg-gray-900 bg-opacity-90 dark:bg-opacity-90 rounded-2xl shadow-2xl p-6 md:p-8 my-8">
+        <!-- O conteúdo da aplicação será injetado aqui pelo JavaScript -->
+        <div class="flex justify-center items-center h-full min-h-[300px] text-xl text-gray-700 dark:text-gray-300">
+            Carregando aplicativo...
+        </div>
+    </div>
+
+    <!-- Back4App (Parse SDK) CDN - Carregado antes do script principal -->
+    <script src="https://unpkg.com/parse/dist/parse.min.js"></script>
+
+    <script>
+        // Use uma IIFE (Immediately Invoked Function Expression) para encapsular todo o código JavaScript
+        // Isso ajuda a evitar poluição do escopo global.
+        (function() {
+            // ATENÇÃO: Substitua 'YOUR_BACK4APP_APP_ID' e 'YOUR_BACK4APP_JAVASCRIPT_KEY' pelas suas chaves reais do Back4App.
+            // Você pode encontrá-las no seu painel Back4App, em App Settings > Core Settings.
+            const BACK4APP_APP_ID = "YOUR_BACK4APP_APP_ID";
+            const BACK4APP_JAVASCRIPT_KEY = "YOUR_BACK4APP_JAVASCRIPT_KEY";
+
+            // --- Variáveis de Estado da Aplicação (substituindo o useState do React) ---
+            let currentUser = null; // Armazena o objeto do usuário logado do Back4App
+            let workouts = { // Armazena os treinos organizados por dia
+                'Segunda-feira': [],
+                'Terça-feira': [],
+                'Quarta-feira': [],
+                'Quinta-feira': [],
+                'Sexta-feira': [],
+                'Sábado': [],
+                'Domingo': [],
+            };
+            let diet = ''; // Armazena o plano de dieta
+            let weight = ''; // Armazena o peso atual
+            let authError = ''; // Mensagem de erro para autenticação ou outras ações
+            let editingWorkout = null; // Armazena o treino que está sendo editado (ou null)
+            let currentDay = ''; // O dia da semana atualmente selecionado para adicionar/editar treino
+            let workoutToDelete = null; // Referência ao treino a ser excluído
+
+            // Variáveis para controlar a visibilidade dos modais
+            let isWorkoutModalOpen = false;
+            let isDietModalOpen = false;
+            let isWeightModalOpen = false;
+            let isConfirmationModalOpen = false;
+
+            // Referências para as classes Parse (serão inicializadas após o SDK carregar e a aplicação iniciar)
+            let WorkoutParseClass = null;
+            let DietParseClass = null;
+            let WeightParseClass = null;
+
+            // Elemento raiz onde a aplicação será renderizada
+            const appRoot = document.getElementById('app-root');
+            // Nomes dos dias da semana para iteração e exibição
+            const daysOfWeek = [
+                'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira',
+                'Sexta-feira', 'Sábado', 'Domingo'
+            ];
+
+            // --- Funções Auxiliares para Manipulação do DOM e Lógica Geral ---
+
+            /**
+             * Renderiza um modal genérico na tela.
+             * @param {boolean} isOpen - Se o modal deve estar visível.
+             * @param {string} title - Título do modal.
+             * @param {string} contentHtml - Conteúdo HTML a ser inserido no corpo do modal.
+             * @param {Function} closeCallback - Função a ser chamada ao fechar o modal.
+             */
+            function renderModal(isOpen, title, contentHtml, closeCallback) {
+                const existingModal = document.getElementById('generic-modal-wrapper');
+                if (!isOpen) {
+                    if (existingModal) existingModal.remove(); // Remove o modal se não estiver mais aberto
+                    return;
+                }
+
+                if (existingModal) existingModal.remove(); // Remove modal anterior para renderizar um novo (evita duplicatas)
+
+                const modalWrapper = document.createElement('div');
+                modalWrapper.id = 'generic-modal-wrapper';
+                modalWrapper.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50';
+
+                const modalContent = document.createElement('div');
+                modalContent.className = 'bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg relative animate-fade-in-up';
+
+                const modalTitle = document.createElement('h2');
+                modalTitle.className = 'text-2xl font-bold mb-4 text-gray-800 dark:text-white border-b pb-2';
+                modalTitle.textContent = title;
+
+                const closeButton = document.createElement('button');
+                closeButton.className = 'absolute top-3 right-3 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-3xl font-bold';
+                closeButton.innerHTML = '&times;'; // Ícone de fechar
+                closeButton.onclick = closeCallback; // Atribui a função de fechar
+
+                const contentContainer = document.createElement('div');
+                contentContainer.innerHTML = contentHtml; // Insere o HTML do conteúdo fornecido
+
+                modalContent.appendChild(modalTitle);
+                modalContent.appendChild(closeButton);
+                modalContent.appendChild(contentContainer);
+                modalWrapper.appendChild(modalContent);
+
+                document.body.appendChild(modalWrapper); // Adiciona o modal ao corpo do documento
+            }
+
+            /**
+             * Renderiza o modal de confirmação para exclusão de treino.
+             */
+            function renderConfirmationModal() {
+                const message = "Tem certeza que deseja excluir este treino?";
+                const contentHtml = `
+                    <p class="text-gray-700 dark:text-gray-300 mb-6 text-center">${message}</p>
+                    <div class="flex justify-around space-x-4">
+                        <button id="confirm-delete-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105">
+                            Confirmar
+                        </button>
+                        <button id="cancel-delete-btn" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105">
+                            Cancelar
+                        </button>
+                    </div>
+                `;
+                renderModal(isConfirmationModalOpen, "Confirmação", contentHtml, cancelDeleteWorkout);
+
+                if (isConfirmationModalOpen) {
+                    // Atribui os event listeners aos botões do modal de confirmação
+                    document.getElementById('confirm-delete-btn').onclick = confirmDeleteWorkout;
+                    document.getElementById('cancel-delete-btn').onclick = cancelDeleteWorkout;
+                }
+            }
+
+            /**
+             * Exibe uma mensagem temporária (erro ou sucesso) na interface.
+             * @param {string} message - A mensagem a ser exibida.
+             * @param {'error'|'success'} type - O tipo da mensagem (controla a cor).
+             */
+            function showTempMessage(message, type) {
+                authError = message; // Atualiza a variável de estado da mensagem de erro
+                renderApp(); // Força a re-renderização para mostrar a mensagem
+                setTimeout(() => {
+                    authError = ''; // Limpa a mensagem após 3 segundos
+                    renderApp(); // Força a re-renderização para esconder a mensagem
+                }, 3000);
+            }
+
+            /**
+             * Limpa a mensagem de erro atual.
+             */
+            function clearAuthError() {
+                authError = '';
+                renderApp(); // Re-renderiza para remover a mensagem da UI
+            }
+
+            // --- Funções de Autenticação com Back4App ---
+
+            /**
+             * Tenta fazer login de um usuário com e-mail e senha no Back4App.
+             * @param {string} email - O e-mail do usuário.
+             * @param {string} password - A senha do usuário.
+             */
+            async function handleLogin(email, password) {
+                // Verifica se o SDK do Parse e o objeto de usuário estão disponíveis
+                if (!window.Parse || !window.Parse.User) {
+                    showTempMessage('SDK do Back4App não carregado. Tente novamente.', 'error');
+                    return;
+                }
+                try {
+                    clearAuthError(); // Limpa quaisquer erros anteriores
+                    const loggedInUser = await window.Parse.User.logIn(email, password);
+                    currentUser = loggedInUser; // Define o usuário logado
+                    await loadUserData(currentUser); // Carrega os dados do usuário após o login
+                    renderApp(); // Re-renderiza para a tela principal da aplicação
+                } catch (error) {
+                    console.error("Erro ao fazer login:", error);
+                    let errorMessage = 'Erro ao fazer login. Verifique seu e-mail e senha.';
+                    if (error.code === 101) { // Código de erro do Parse para credenciais inválidas
+                        errorMessage = 'E-mail ou senha inválidos.';
+                    }
+                    showTempMessage(errorMessage, 'error'); // Exibe a mensagem de erro
+                }
+            }
+
+            /**
+             * Tenta registrar um novo usuário com e-mail e senha no Back4App.
+             * @param {string} email - O e-mail do novo usuário.
+             * @param {string} password - A senha do novo usuário.
+             */
+            async function handleRegister(email, password) {
+                if (!window.Parse || !window.Parse.User) {
+                    showTempMessage('SDK do Back4App não carregado. Tente novamente.', 'error');
+                    return;
+                }
+                try {
+                    clearAuthError(); // Limpa quaisquer erros anteriores
+                    const newUser = new window.Parse.User();
+                    newUser.set("username", email); // O username no Parse é frequentemente o e-mail
+                    newUser.set("email", email);
+                    newUser.set("password", password);
+                    const registeredUser = await newUser.signUp();
+                    currentUser = registeredUser; // Define o usuário recém-registrado como logado
+                    // Não há dados para carregar para um novo usuário, mas ele está logado e pronto para inserir dados
+                    renderApp(); // Re-renderiza para a tela principal da aplicação
+                } catch (error) {
+                    console.error("Erro ao registrar:", error);
+                    let errorMessage = 'Erro ao registrar. Tente novamente.';
+                    if (error.code === 202 || error.code === 203) { // Códigos de erro do Parse para e-mail/usuário já em uso
+                        errorMessage = 'Este e-mail já está em uso.';
+                    } else if (error.code === 125) { // Código de erro do Parse para formato de e-mail inválido
+                        errorMessage = 'Formato de e-mail inválido.';
+                    }
+                    showTempMessage(errorMessage, 'error'); // Exibe a mensagem de erro
+                }
+            }
+
+            /**
+             * Realiza o logout do usuário atual do Back4App.
+             */
+            async function handleLogout() {
+                if (!window.Parse || !window.Parse.User) {
+                    showTempMessage('SDK do Back4App não carregado. Tente novamente.', 'error');
+                    return;
+                }
+                try {
+                    await window.Parse.User.logOut(); // Faz logout do Parse
+                    currentUser = null; // Limpa o usuário atual
+                    // Limpa o estado local de treinos, dieta e peso para a próxima sessão
+                    workouts = {
+                        'Segunda-feira': [], 'Terça-feira': [], 'Quarta-feira': [], 'Quinta-feira': [],
+                        'Sexta-feira': [], 'Sábado': [], 'Domingo': [],
+                    };
+                    diet = '';
+                    weight = '';
+                    renderApp(); // Re-renderiza para a tela de autenticação
+                } catch (error) {
+                    console.error("Erro ao fazer logout:", error);
+                    showTempMessage('Erro ao fazer logout. Tente novamente.', 'error');
+                }
+            }
+
+            // --- Funções para Carregar Dados do Back4App ---
+
+            /**
+             * Carrega os dados (treinos, dieta, peso) do usuário logado do Back4App.
+             * @param {object} userObj - O objeto do usuário Parse atual.
+             */
+            async function loadUserData(userObj) {
+                // Garante que o usuário e as classes Parse estejam definidos
+                if (!userObj || !WorkoutParseClass || !DietParseClass || !WeightParseClass) return;
+
+                try {
+                    // 1. Carrega Treinos
+                    const workoutsQuery = new window.Parse.Query(WorkoutParseClass);
+                    workoutsQuery.equalTo("user", userObj); // Filtra treinos pelo usuário atual
+                    const userWorkouts = await workoutsQuery.find();
+                    const loadedWorkouts = { // Reinicia a estrutura de treinos
+                        'Segunda-feira': [], 'Terça-feira': [], 'Quarta-feira': [], 'Quinta-feira': [],
+                        'Sexta-feira': [], 'Sábado': [], 'Domingo': [],
+                    };
+                    userWorkouts.forEach(w => {
+                        const day = w.get('day'); // Obtém o dia do treino
+                        if (loadedWorkouts[day]) { // Adiciona o treino ao dia correto
+                            loadedWorkouts[day].push({
+                                id: w.id, // ID único do objeto Parse
+                                name: w.get('name'),
+                                description: w.get('description'),
+                                parseObject: w // Armazena a referência ao objeto Parse original para futuras atualizações/exclusões
+                            });
+                        }
+                    });
+                    workouts = loadedWorkouts; // Atualiza o estado global de treinos
+
+                    // 2. Carrega Dieta
+                    const dietQuery = new window.Parse.Query(DietParseClass);
+                    dietQuery.equalTo("user", userObj);
+                    const userDiet = await dietQuery.first(); // Busca a primeira (e única) entrada de dieta do usuário
+                    if (userDiet) {
+                        diet = userDiet.get('plan');
+                    } else {
+                        diet = ''; // Limpa a dieta se não houver nenhuma
+                    }
+
+                    // 3. Carrega Peso (a entrada mais recente)
+                    const weightQuery = new window.Parse.Query(WeightParseClass);
+                    weightQuery.equalTo("user", userObj);
+                    weightQuery.descending("createdAt"); // Ordena para pegar o mais recente
+                    const userWeight = await weightQuery.first(); // Busca a entrada de peso mais recente
+                    if (userWeight) {
+                        weight = userWeight.get('value');
+                    } else {
+                        weight = ''; // Limpa o peso se não houver nenhum
+                    }
+
+                    renderApp(); // Re-renderiza a UI após carregar todos os dados
+                } catch (error) {
+                    console.error("Erro ao carregar dados do usuário:", error);
+                    showTempMessage('Erro ao carregar seus dados. Tente novamente.', 'error');
+                }
+            }
+
+            // --- Funções para manipulação de Treinos ---
+
+            /**
+             * Abre o modal para adicionar um novo treino para um dia específico.
+             * @param {string} day - O dia da semana para o qual o treino será adicionado.
+             */
+            function openAddWorkoutModal(day) {
+                editingWorkout = null; // Garante que não estamos em modo de edição
+                currentDay = day;
+                isWorkoutModalOpen = true; // Abre o modal
+                renderApp(); // Força a re-renderização
+            }
+
+            /**
+             * Abre o modal para editar um treino existente.
+             * @param {string} day - O dia da semana do treino.
+             * @param {object} workout - O objeto do treino a ser editado.
+             */
+            function openEditWorkoutModal(day, workout) {
+                editingWorkout = workout; // Define o treino a ser editado
+                currentDay = day;
+                isWorkoutModalOpen = true; // Abre o modal
+                renderApp(); // Força a re-renderização
+            }
+
+            /**
+             * Fecha o modal de adicionar/editar treino e limpa o estado relacionado.
+             */
+            function closeWorkoutModal() {
+                isWorkoutModalOpen = false;
+                editingWorkout = null;
+                currentDay = '';
+                renderApp(); // Força a re-renderização
+            }
+
+            /**
+             * Lida com o salvamento (adição ou edição) de um treino no Back4App.
+             * @param {Event} event - O evento de submissão do formulário.
+             */
+            async function handleSaveWorkout(event) {
+                event.preventDefault(); // Impede o recarregamento da página
+                // Verifica se a classe Parse do treino está disponível
+                if (!WorkoutParseClass) {
+                    showTempMessage('SDK do Back4App não carregado. Tente novamente.', 'error');
+                    return;
+                }
+
+                const form = event.target;
+                const name = form.workoutName.value;
+                const description = form.workoutDescription.value;
+
+                if (!name.trim()) { // Validação simples do nome do treino
+                    showTempMessage('O nome do treino não pode estar vazio.', 'error');
+                    return;
+                }
+
+                try {
+                    if (editingWorkout) {
+                        // Modo de Edição: Atualiza um treino existente
+                        const workoutObject = editingWorkout.parseObject;
+                        workoutObject.set('name', name);
+                        workoutObject.set('description', description);
+                        await workoutObject.save(); // Salva as alterações no Back4App
+
+                        // Atualiza o estado local para refletir as mudanças na UI
+                        workouts[currentDay] = workouts[currentDay].map(w =>
+                            w.id === editingWorkout.id ? { ...w, name, description } : w
+                        );
+                    } else {
+                        // Modo de Adição: Cria um novo treino
+                        const newWorkoutObject = new WorkoutParseClass();
+                        newWorkoutObject.set('name', name);
+                        newWorkoutObject.set('description', description);
+                        newWorkoutObject.set('day', currentDay);
+                        newWorkoutObject.set('user', currentUser); // Vincula o treino ao usuário atual
+                        await newWorkoutObject.save(); // Salva o novo treino no Back4App
+
+                        // Adiciona o novo treino ao estado local
+                        workouts[currentDay].push({
+                            id: newWorkoutObject.id,
+                            name,
+                            description,
+                            parseObject: newWorkoutObject // Armazena a referência para o objeto Parse
+                        });
+                    }
+                    closeWorkoutModal(); // Fecha o modal após salvar
+                } catch (error) {
+                    console.error("Erro ao salvar treino:", error);
+                    showTempMessage('Erro ao salvar treino. Tente novamente.', 'error');
+                }
+            }
+
+            /**
+             * Prepara para excluir um treino, abrindo o modal de confirmação.
+             * @param {string} day - O dia do treino a ser excluído.
+             * @param {string} workoutId - O ID do treino a ser excluído.
+             */
+            function handleDeleteWorkoutClick(day, workoutId) {
+                workoutToDelete = { day, workoutId }; // Armazena o treino para exclusão
+                isConfirmationModalOpen = true; // Abre o modal de confirmação
+                renderApp(); // Força a re-renderização
+            }
+
+            /**
+             * Confirma e executa a exclusão de um treino no Back4App.
+             */
+            async function confirmDeleteWorkout() {
+                if (!WorkoutParseClass) {
+                    showTempMessage('SDK do Back4App não carregado. Tente novamente.', 'error');
+                    return;
+                }
+                if (workoutToDelete) {
+                    try {
+                        // Encontra o objeto Parse correspondente ao treino a ser excluído
+                        const workoutObj = workouts[workoutToDelete.day].find(w => w.id === workoutToDelete.workoutId);
+                        if (workoutObj && workoutObj.parseObject) {
+                            await workoutObj.parseObject.destroy(); // Exclui o treino do Back4App
+                            // Remove o treino do estado local
+                            workouts[workoutToDelete.day] = workouts[workoutToDelete.day].filter(
+                                workout => workout.id !== workoutToDelete.workoutId
+                            );
+                        }
+                    } catch (error) {
+                        console.error("Erro ao excluir treino:", error);
+                        showTempMessage('Erro ao excluir treino. Tente novamente.', 'error');
+                    }
+                }
+                isConfirmationModalOpen = false; // Fecha o modal de confirmação
+                workoutToDelete = null; // Limpa a referência do treino a ser excluído
+                renderApp(); // Força a re-renderização
+            }
+
+            /**
+             * Cancela a exclusão de um treino, fechando o modal de confirmação.
+             */
+            function cancelDeleteWorkout() {
+                isConfirmationModalOpen = false;
+                workoutToDelete = null;
+                renderApp();
+            }
+
+            // --- Funções para manipulação de Dieta ---
+
+            /**
+             * Abre o modal de dieta.
+             */
+            function openDietModal() {
+                isDietModalOpen = true;
+                renderApp();
+            }
+
+            /**
+             * Fecha o modal de dieta.
+             */
+            function closeDietModal() {
+                isDietModalOpen = false;
+                renderApp();
+            }
+
+            /**
+             * Lida com o salvamento (adição ou edição) do plano de dieta no Back4App.
+             * @param {Event} event - O evento de submissão do formulário.
+             */
+            async function handleSaveDiet(event) {
+                event.preventDefault();
+                if (!DietParseClass) {
+                    showTempMessage('SDK do Back4App não carregado. Tente novamente.', 'error');
+                    return;
+                }
+                const dietPlan = event.target.dietPlan.value;
+
+                try {
+                    const dietQuery = new window.Parse.Query(DietParseClass);
+                    dietQuery.equalTo("user", currentUser); // Busca a dieta do usuário atual
+                    let userDietObject = await dietQuery.first();
+
+                    if (userDietObject) {
+                        // Se já existe uma dieta, atualiza
+                        userDietObject.set('plan', dietPlan);
+                        await userDietObject.save();
+                    } else {
+                        // Se não existe, cria uma nova
+                        userDietObject = new DietParseClass();
+                        userDietObject.set('user', currentUser);
+                        userDietObject.set('plan', dietPlan);
+                        await userDietObject.save();
+                    }
+                    diet = dietPlan; // Atualiza o estado local
+                    closeDietModal(); // Fecha o modal
+                } catch (error) {
+                    console.error("Erro ao salvar dieta:", error);
+                    showTempMessage('Erro ao salvar dieta. Tente novamente.', 'error');
+                }
+            }
+
+            // --- Funções para manipulação de Peso ---
+
+            /**
+             * Abre o modal de peso.
+             */
+            function openWeightModal() {
+                isWeightModalOpen = true;
+                renderApp();
+            }
+
+            /**
+             * Fecha o modal de peso.
+             */
+            function closeWeightModal() {
+                isWeightModalOpen = false;
+                renderApp();
+            }
+
+            /**
+             * Lida com o salvamento de um novo registro de peso no Back4App.
+             * @param {Event} event - O evento de submissão do formulário.
+             */
+            async function handleSaveWeight(event) {
+                event.preventDefault();
+                if (!WeightParseClass) {
+                    showTempMessage('SDK do Back4App não carregado. Tente novamente.', 'error');
+                    return;
+                }
+                const newWeightValue = parseFloat(event.target.newWeight.value);
+
+                if (isNaN(newWeightValue) || newWeightValue <= 0) { // Validação do peso
+                    showTempMessage('Por favor, insira um peso válido.', 'error');
+                    return;
+                }
+
+                try {
+                    // Sempre cria uma nova entrada de peso (para manter um histórico)
+                    const newWeightObject = new WeightParseClass();
+                    newWeightObject.set('value', newWeightValue);
+                    newWeightObject.set('user', currentUser); // Vincula ao usuário
+                    await newWeightObject.save(); // Salva no Back4App
+
+                    weight = newWeightValue; // Atualiza o estado local com o último peso
+                    closeWeightModal(); // Fecha o modal
+                } catch (error) {
+                    console.error("Erro ao salvar peso:", error);
+                    showTempMessage('Erro ao salvar peso. Tente novamente.', 'error');
+                }
+            }
+
+            // --- Funções de Renderização Principal (Redesenham a UI) ---
+
+            /**
+             * Renderiza a tela de autenticação (Login/Cadastro).
+             */
+            function renderAuthScreen() {
+                appRoot.innerHTML = `
+                    <div class="relative z-10 bg-white dark:bg-gray-900 bg-opacity-90 dark:bg-opacity-90 rounded-2xl shadow-2xl p-6 md:p-8 my-8 max-w-md w-full text-center">
+                        <h2 id="auth-title" class="text-3xl md:text-4xl font-extrabold mb-8 text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-yellow-500 drop-shadow-lg">
+                            Login
+                        </h2>
+                        ${authError ? `<div class="bg-red-500 text-white p-3 rounded-md mb-4 flex justify-between items-center animate-fade-in"><span>${authError}</span><button id="clear-error-btn" class="font-bold text-lg">&times;</button></div>` : ''}
+                        <form id="auth-form" class="space-y-6">
+                            <div>
+                                <input type="email" placeholder="E-mail" id="auth-email" class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:bg-gray-700 dark:text-white" required />
+                            </div>
+                            <div>
+                                <input type="password" placeholder="Senha" id="auth-password" class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:bg-gray-700 dark:text-white" required />
+                            </div>
+                            <button type="submit" id="auth-submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
+                                Entrar
+                            </button>
+                        </form>
+                        <button id="toggle-auth-mode-btn" class="mt-6 text-blue-600 dark:text-blue-400 hover:underline transition-colors duration-300">
+                            Não tem uma conta? Crie uma!
+                        </button>
+                    </div>
+                `;
+
+                // Adiciona event listeners aos elementos da tela de autenticação após eles serem criados no DOM
+                const authTitle = document.getElementById('auth-title');
+                const authSubmitBtn = document.getElementById('auth-submit-btn');
+                const toggleAuthModeBtn = document.getElementById('toggle-auth-mode-btn');
+                const authForm = document.getElementById('auth-form');
+                const authEmail = document.getElementById('auth-email');
+                const authPassword = document.getElementById('auth-password');
+                const clearErrorBtn = document.getElementById('clear-error-btn');
+
+                let isLoginMode = true; // Estado interno para alternar entre Login e Cadastro
+
+                if (clearErrorBtn) { // Atribui o listener se o botão de limpar erro existir
+                    clearErrorBtn.onclick = clearAuthError;
+                }
+
+                toggleAuthModeBtn.onclick = () => { // Lógica para alternar entre Login/Cadastro
+                    isLoginMode = !isLoginMode;
+                    authTitle.textContent = isLoginMode ? 'Login' : 'Criar Conta';
+                    authSubmitBtn.textContent = isLoginMode ? 'Entrar' : 'Registrar';
+                    toggleAuthModeBtn.textContent = isLoginMode ? 'Não tem uma conta? Crie uma!' : 'Já tem uma conta? Faça login!';
+                    clearAuthError(); // Limpa a mensagem de erro ao trocar de modo
+                };
+
+                authForm.onsubmit = (e) => { // Lida com a submissão do formulário de autenticação
+                    e.preventDefault();
+                    const email = authEmail.value;
+                    const password = authPassword.value;
+                    if (isLoginMode) {
+                        handleLogin(email, password);
+                    } else {
+                        handleRegister(email, password);
+                    }
+                };
+            }
+
+            /**
+             * Renderiza a interface principal da aplicação (após o login).
+             */
+            function renderMainApp() {
+                let workoutsHtml = '';
+                // Loop pelos dias da semana para gerar o HTML dos treinos
+                for (const day of daysOfWeek) {
+                    const dayWorkouts = workouts[day];
+                    let dayWorkoutsList = '';
+                    if (dayWorkouts.length === 0) {
+                        dayWorkoutsList = '<p class="text-gray-600 dark:text-gray-400 italic">Nenhum treino adicionado para este dia.</p>';
+                    } else {
+                        dayWorkoutsList = '<ul class="list-disc list-inside space-y-2">';
+                        dayWorkouts.forEach(workout => {
+                            dayWorkoutsList += `
+                                <li class="text-gray-700 dark:text-gray-300 flex justify-between items-center">
+                                    <div>
+                                        <span class="font-semibold">${workout.name}:</span> ${workout.description}
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button data-day="${day}" data-workout-id="${workout.id}" class="edit-workout-btn text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-600 focus:outline-none" title="Editar Treino">
+                                            ✏️
+                                        </button>
+                                        <button data-day="${day}" data-workout-id="${workout.id}" class="delete-workout-btn text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-600 focus:outline-none" title="Excluir Treino">
+                                            🗑️
+                                        </button>
+                                    </div>
+                                </li>
+                            `;
+                        });
+                        dayWorkoutsList += '</ul>';
+                    }
+                    workoutsHtml += `
+                        <div class="bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-xl p-5 shadow-lg transform hover:scale-102 transition-all duration-300">
+                            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">${day}</h3>
+                            ${dayWorkoutsList}
+                            <button data-day="${day}" class="add-workout-btn mt-5 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
+                                Adicionar Treino
+                            </button>
+                        </div>
+                    `;
+                }
+
+                // Define o HTML interno do elemento raiz da aplicação
+                appRoot.innerHTML = `
+                    <div class="flex justify-between items-center mb-10">
+                        <h1 class="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-yellow-500 drop-shadow-lg animate-pulse-fade">
+                            💪 Meu Diário de Treinos 💪
+                        </h1>
+                        <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
+                            Sair
+                        </button>
+                    </div>
+
+                    ${authError ? `<div class="bg-red-500 text-white p-3 rounded-md mb-4 flex justify-between items-center animate-fade-in"><span>${authError}</span><button id="clear-error-btn" class="font-bold text-lg">&times;</button></div>` : ''}
+
+                    <section class="mb-12">
+                        <h2 class="text-3xl font-bold mb-6 text-center text-gray-800 dark:text-white">Seus Treinos Semanais</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            ${workoutsHtml}
+                        </div>
+                    </section>
+
+                    <section class="mb-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-6 shadow-xl transform hover:scale-102 transition-all duration-300">
+                        <h2 class="text-3xl font-bold text-white text-center mb-4">Sua Dieta</h2>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-inner min-h-[100px] flex items-center justify-center">
+                            ${diet ? `<p class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap text-lg text-center">${diet}</p>` : `<p class="text-gray-500 dark:text-gray-400 italic text-lg text-center">Nenhuma dieta adicionada ainda.</p>`}
+                        </div>
+                        <button id="open-diet-modal-btn" class="mt-6 w-full bg-white text-emerald-700 hover:bg-gray-100 font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105">
+                            ${diet ? 'Editar Dieta' : 'Adicionar Dieta'}
+                        </button>
+                    </section>
+
+                    <section class="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-2xl p-6 shadow-xl transform hover:scale-102 transition-all duration-300">
+                        <h2 class="text-3xl font-bold text-white text-center mb-4">Seu Peso</h2>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-inner min-h-[80px] flex items-center justify-center">
+                            ${weight ? `<p class="text-gray-700 dark:text-gray-300 text-5xl font-extrabold">${weight} kg</p>` : `<p class="text-gray-500 dark:text-gray-400 italic text-lg text-center">Nenhum peso registrado ainda.</p>`}
+                        </div>
+                        <button id="open-weight-modal-btn" class="mt-6 w-full bg-white text-indigo-700 hover:bg-gray-100 font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105">
+                            ${weight ? 'Atualizar Peso' : 'Registrar Peso'}
+                        </button>
+                    </section>
+                `;
+
+                // Adiciona event listeners para os elementos da aplicação principal
+                document.getElementById('logout-btn').onclick = handleLogout;
+                if (document.getElementById('clear-error-btn')) {
+                    document.getElementById('clear-error-btn').onclick = clearAuthError;
+                }
+
+                // Event listeners para os botões de treinos (adicionar, editar, excluir)
+                document.querySelectorAll('.add-workout-btn').forEach(button => {
+                    button.onclick = (e) => openAddWorkoutModal(e.target.dataset.day);
+                });
+                document.querySelectorAll('.edit-workout-btn').forEach(button => {
+                    button.onclick = (e) => {
+                        const day = e.target.dataset.day;
+                        const workoutId = e.target.dataset.workoutId;
+                        // Encontra o treino correspondente no estado local
+                        const workout = workouts[day].find(w => w.id === workoutId);
+                        if (workout) openEditWorkoutModal(day, workout);
+                    };
+                });
+                document.querySelectorAll('.delete-workout-btn').forEach(button => {
+                    button.onclick = (e) => handleDeleteWorkoutClick(e.target.dataset.day, e.target.dataset.workoutId);
+                });
+
+                document.getElementById('open-diet-modal-btn').onclick = openDietModal;
+                document.getElementById('open-weight-modal-btn').onclick = openWeightModal;
+
+                // Renderiza os modais se estiverem abertos
+                if (isWorkoutModalOpen) renderWorkoutModal();
+                if (isDietModalOpen) renderDietModal();
+                if (isWeightModalOpen) renderWeightModal();
+                if (isConfirmationModalOpen) renderConfirmationModal();
+            }
+
+            /**
+             * Renderiza o conteúdo do modal de adicionar/editar treino.
+             */
+            function renderWorkoutModal() {
+                const title = editingWorkout ? 'Editar Treino' : `Adicionar Treino para ${currentDay}`;
+                const contentHtml = `
+                    <form id="workout-form" class="space-y-6">
+                        <div>
+                            <label for="workoutName" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                                Nome do Treino
+                            </label>
+                            <input
+                                type="text"
+                                id="workoutName"
+                                name="workoutName"
+                                value="${editingWorkout?.name || ''}"
+                                class="mt-1 block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:bg-gray-700 dark:text-white"
+                                placeholder="Ex: Treino de Pernas"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label for="workoutDescription" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                                Descrição (Opcional)
+                            </label>
+                            <textarea
+                                id="workoutDescription"
+                                name="workoutDescription"
+                                rows="4"
+                                class="mt-1 block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:bg-gray-700 dark:text-white"
+                                placeholder="Ex: Agachamento 3x10, Leg Press 4x12..."
+                            >${editingWorkout?.description || ''}</textarea>
+                        </div>
+                        <div class="flex justify-end space-x-4">
+                            <button type="button" id="cancel-workout-btn" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
+                                Cancelar
+                            </button>
+                            <button type="submit" id="save-workout-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
+                                ${editingWorkout ? 'Salvar Alterações' : 'Adicionar Treino'}
+                            </button>
+                        </div>
+                    </form>
+                `;
+                renderModal(isWorkoutModalOpen, title, contentHtml, closeWorkoutModal);
+
+                if (isWorkoutModalOpen) {
+                    // Atribui os event listeners aos botões do formulário do modal de treino
+                    document.getElementById('workout-form').onsubmit = handleSaveWorkout;
+                    document.getElementById('cancel-workout-btn').onclick = closeWorkoutModal;
+                }
+            }
+
+            /**
+             * Renderiza o conteúdo do modal de dieta.
+             */
+            function renderDietModal() {
+                const title = "Sua Dieta Completa";
+                const contentHtml = `
+                    <form id="diet-form" class="space-y-6">
+                        <div>
+                            <label for="dietPlan" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                                Plano de Dieta
+                            </label>
+                            <textarea
+                                id="dietPlan"
+                                name="dietPlan"
+                                rows="10"
+                                class="mt-1 block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 text-gray-900 dark:bg-gray-700 dark:text-white"
+                                placeholder="Descreva sua dieta para a semana, refeição por refeição."
+                            >${diet}</textarea>
+                        </div>
+                        <div class="flex justify-end space-x-4">
+                            <button type="button" id="cancel-diet-btn" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
+                                Cancelar
+                            </button>
+                            <button type="submit" id="save-diet-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
+                                Salvar Dieta
+                            </button>
+                        </div>
+                    </form>
+                `;
+                renderModal(isDietModalOpen, title, contentHtml, closeDietModal);
+
+                if (isDietModalOpen) {
+                    // Atribui os event listeners aos botões do formulário do modal de dieta
+                    document.getElementById('diet-form').onsubmit = handleSaveDiet;
+                    document.getElementById('cancel-diet-btn').onclick = closeDietModal;
+                }
+            }
+
+            /**
+             * Renderiza o conteúdo do modal de peso.
+             */
+            function renderWeightModal() {
+                const title = "Registrar Seu Peso";
+                const contentHtml = `
+                    <form id="weight-form" class="space-y-6">
+                        <div>
+                            <label for="newWeight" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                                Peso (kg)
+                            </label>
+                            <input
+                                type="number"
+                                id="newWeight"
+                                name="newWeight"
+                                step="0.1"
+                                min="0"
+                                value="${weight}"
+                                class="mt-1 block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 text-gray-900 dark:bg-gray-700 dark:text-white"
+                                placeholder="Ex: 75.5"
+                                required
+                            />
+                        </div>
+                        <div class="flex justify-end space-x-4">
+                            <button type="button" id="cancel-weight-btn" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
+                                Cancelar
+                            </button>
+                            <button type="submit" id="save-weight-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
+                                Salvar Peso
+                            </button>
+                        </div>
+                    </form>
+                `;
+                renderModal(isWeightModalOpen, title, contentHtml, closeWeightModal);
+
+                if (isWeightModalOpen) {
+                    // Atribui os event listeners aos botões do formulário do modal de peso
+                    document.getElementById('weight-form').onsubmit = handleSaveWeight;
+                    document.getElementById('cancel-weight-btn').onclick = closeWeightModal;
+                }
+            }
+
+            /**
+             * Função principal de renderização que decide qual tela exibir (autenticação ou app principal).
+             * Também verifica o status de carregamento do SDK do Back4App.
+             */
+            function renderApp() {
+                // Se o SDK do Parse ainda não estiver carregado ou as classes não estiverem definidas, mostra tela de carregamento
+                if (typeof window.Parse === 'undefined' || !WorkoutParseClass) {
+                    appRoot.innerHTML = `
+                        <div class="flex justify-center items-center h-full min-h-[300px] text-xl text-gray-700 dark:text-gray-300">
+                            Carregando Back4App SDK...
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Se o usuário não estiver logado, renderiza a tela de autenticação
+                if (!currentUser) {
+                    renderAuthScreen();
+                } else {
+                    // Se o usuário estiver logado, renderiza a tela principal da aplicação
+                    renderMainApp();
+                }
+            }
+
+            // --- Inicialização da Aplicação quando o DOM estiver pronto ---
+            window.onload = function() {
+                // Tenta inicializar o Parse SDK. Ele já deve estar disponível se o CDN foi carregado.
+                if (typeof window.Parse !== 'undefined') {
+                    console.log("Parse SDK já disponível. Inicializando...");
+                    window.Parse.initialize(BACK4APP_APP_ID, BACK4APP_JAVASCRIPT_KEY);
+                    window.Parse.serverURL = 'https://parseapi.back4app.com/';
+
+                    // Define as classes Parse uma vez que o SDK esteja inicializado
+                    WorkoutParseClass = window.Parse.Object.extend("Workout");
+                    DietParseClass = window.Parse.Object.extend("Diet");
+                    WeightParseClass = window.Parse.Object.extend("Weight");
+
+                    // Tenta verificar o usuário atual após a inicialização do Parse
+                    window.Parse.User.currentAsync().then(user => {
+                        currentUser = user; // Define o usuário atual
+                        if (currentUser) {
+                            loadUserData(currentUser); // Carrega os dados se o usuário estiver logado
+                        }
+                        renderApp(); // Renderiza a aplicação (tela de login ou principal)
+                    }).catch(error => {
+                        console.error("Erro ao verificar usuário atual no início:", error);
+                        currentUser = null; // Garante que o usuário é nulo em caso de erro
+                        renderApp(); // Renderiza a tela de login
+                    });
+                } else {
+                    console.error("Parse SDK não encontrado. Verifique o CDN ou a conexão.");
+                    // renderApp() será chamada, e a mensagem de carregamento/erro será exibida
+                    renderApp();
+                }
+            };
+        })();
+    </script>
+</body>
+</html>
