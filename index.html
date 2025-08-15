@@ -952,10 +952,9 @@
                     if (workoutDetails[selectedWorkoutType]) {
                         exerciseSelectDisabled = '';
                         // Extract just the exercise name from the saved description for pre-selection
-                        const savedExerciseName = editingWorkout.description.split(':')[1] ? editingWorkout.description.split(':')[1].trim() : '';
-
+                        const savedExerciseName = editingWorkout.description; // Description is now just the exercise name
                         workoutDetails[selectedWorkoutType].exercises.forEach(ex => {
-                            const selected = (savedExerciseName.startsWith(ex.name)) ? 'selected' : ''; // Check if saved description starts with exercise name
+                            const selected = (savedExerciseName === ex.name) ? 'selected' : ''; // Check if saved description matches exercise name
                             exerciseOptionsHtml += `<option value="${ex.name}" ${selected}>${ex.name}</option>`;
                         });
 
@@ -972,7 +971,7 @@
                     }
                     // When editing, the textarea should show the full description from workoutDetails
                     const workoutTypeForEdit = editingWorkout.name;
-                    const exerciseNameForEdit = editingWorkout.description.split(':')[1] ? editingWorkout.description.split(':')[1].trim() : '';
+                    const exerciseNameForEdit = editingWorkout.description; // Description is now just the exercise name
                     if (workoutDetails[workoutTypeForEdit] && workoutDetails[workoutTypeForEdit].exercises) {
                         const fullExerciseDetail = workoutDetails[workoutTypeForEdit].exercises.find(ex => ex.name === exerciseNameForEdit);
                         if (fullExerciseDetail) {
@@ -1084,11 +1083,11 @@
                     if (editingWorkout) {
                         const selectedWorkoutType = editingWorkout.name;
                         // Extract just the exercise name from the saved description for pre-selection
-                        const savedExerciseName = editingWorkout.description.split(':')[1] ? editingWorkout.description.split(':')[1].trim() : '';
+                        const savedExerciseName = editingWorkout.description; // Description is now just the exercise name
                         updateExerciseAndMachines(selectedWorkoutType, savedExerciseName);
                         // Ensure description is correctly set for editing
                         const workoutTypeForEdit = editingWorkout.name;
-                        const exerciseNameForEdit = editingWorkout.description.split(':')[1] ? editingWorkout.description.split(':')[1].trim() : '';
+                        const exerciseNameForEdit = editingWorkout.description; // Description is now just the exercise name
                         if (workoutDetails[workoutTypeForEdit] && workoutDetails[workoutTypeForEdit].exercises) {
                             const fullExerciseDetail = workoutDetails[workoutTypeForEdit].exercises.find(ex => ex.name === exerciseNameForEdit);
                             if (fullExerciseDetail) {
