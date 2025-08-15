@@ -399,10 +399,11 @@
              * @param {string} day - O dia da semana para o qual o treino será adicionado.
              */
             function openAddWorkoutModal(day) {
+                console.log(`Abrindo modal para adicionar treino para: ${day}`); // Depuração
                 editingWorkout = null; // Garante que não estamos em modo de edição
                 currentDay = day;
                 isWorkoutModalOpen = true; // Abre o modal
-                renderApp(); // Força a re-renderização
+                renderWorkoutModal(); // Chama diretamente a renderização do modal
             }
 
             /**
@@ -411,20 +412,22 @@
              * @param {object} workout - O objeto do treino a ser editado.
              */
             function openEditWorkoutModal(day, workout) {
+                console.log(`Abrindo modal para editar treino para: ${day}, Workout ID: ${workout.id}`); // Depuração
                 editingWorkout = workout; // Define o treino a ser editado
                 currentDay = day;
                 isWorkoutModalOpen = true; // Abre o modal
-                renderApp(); // Força a re-renderização
+                renderWorkoutModal(); // Chama diretamente a renderização do modal
             }
 
             /**
              * Fecha o modal de adicionar/editar treino e limpa o estado relacionado.
              */
             function closeWorkoutModal() {
+                console.log('Fechando modal de treino.'); // Depuração
                 isWorkoutModalOpen = false;
                 editingWorkout = null;
                 currentDay = '';
-                renderApp(); // Força a re-renderização
+                renderWorkoutModal(); // Chama diretamente a renderização do modal para fechar
             }
 
             /**
@@ -475,6 +478,7 @@
                         });
                     }
                     closeWorkoutModal(); // Fecha o modal após salvar
+                    await loadUserData(currentUser); // Recarrega os dados para atualizar a lista de treinos
                 } catch (error) {
                     console.error("Erro ao salvar treino:", error);
                     showTempMessage('Erro ao salvar treino. Tente novamente.', 'error');
@@ -487,15 +491,17 @@
              * @param {string} workoutId - O ID do treino a ser excluído.
              */
             function handleDeleteWorkoutClick(day, workoutId) {
+                console.log(`Preparando para excluir treino: ${day}, ID: ${workoutId}`); // Depuração
                 workoutToDelete = { day, workoutId }; // Armazena o treino para exclusão
                 isConfirmationModalOpen = true; // Abre o modal de confirmação
-                renderApp(); // Força a re-renderização
+                renderConfirmationModal(); // Chama diretamente a renderização do modal
             }
 
             /**
              * Confirma e executa a exclusão de um treino no Firestore.
              */
             async function confirmDeleteWorkout() {
+                console.log('Confirmando exclusão de treino.'); // Depuração
                 if (!userId) {
                     showTempMessage('Usuário não autenticado. Faça login para excluir treinos.', 'error');
                     return;
@@ -516,16 +522,18 @@
                 }
                 isConfirmationModalOpen = false; // Fecha o modal de confirmação
                 workoutToDelete = null; // Limpa a referência do treino a ser excluído
-                renderApp(); // Força a re-renderização
+                renderConfirmationModal(); // Chama diretamente a renderização do modal para fechar
+                await loadUserData(currentUser); // Recarrega os dados para atualizar a lista de treinos
             }
 
             /**
              * Cancela a exclusão de um treino, fechando o modal de confirmação.
              */
             function cancelDeleteWorkout() {
+                console.log('Cancelando exclusão de treino.'); // Depuração
                 isConfirmationModalOpen = false;
                 workoutToDelete = null;
-                renderApp();
+                renderConfirmationModal(); // Chama diretamente a renderização do modal para fechar
             }
 
             // --- Funções para manipulação de Dieta ---
@@ -534,16 +542,18 @@
              * Abre o modal de dieta.
              */
             function openDietModal() {
+                console.log('Abrindo modal de dieta.'); // Depuração
                 isDietModalOpen = true;
-                renderApp();
+                renderDietModal(); // Chama diretamente a renderização do modal
             }
 
             /**
              * Fecha o modal de dieta.
              */
             function closeDietModal() {
+                console.log('Fechando modal de dieta.'); // Depuração
                 isDietModalOpen = false;
-                renderApp();
+                renderDietModal(); // Chama diretamente a renderização do modal para fechar
             }
 
             /**
@@ -564,6 +574,7 @@
 
                     diet = dietPlan; // Atualiza o estado local
                     closeDietModal(); // Fecha o modal
+                    await loadUserData(currentUser); // Recarrega os dados para atualizar a exibição
                 } catch (error) {
                     console.error("Erro ao salvar dieta:", error);
                     showTempMessage('Erro ao salvar dieta. Tente novamente.', 'error');
@@ -576,16 +587,18 @@
              * Abre o modal de peso.
              */
             function openWeightModal() {
+                console.log('Abrindo modal de peso.'); // Depuração
                 isWeightModalOpen = true;
-                renderApp();
+                renderWeightModal(); // Chama diretamente a renderização do modal
             }
 
             /**
              * Fecha o modal de peso.
              */
             function closeWeightModal() {
+                console.log('Fechando modal de peso.'); // Depuração
                 isWeightModalOpen = false;
-                renderApp();
+                renderWeightModal(); // Chama diretamente a renderização do modal para fechar
             }
 
             /**
@@ -614,6 +627,7 @@
 
                     weight = newWeightValue; // Atualiza o estado local com o último peso
                     closeWeightModal(); // Fecha o modal
+                    await loadUserData(currentUser); // Recarrega os dados para atualizar a exibição
                 } catch (error) {
                     console.error("Erro ao salvar peso:", error);
                     showTempMessage('Erro ao salvar peso. Tente novamente.', 'error');
@@ -942,13 +956,15 @@
                 });
 
                 // Adiciona o listener de delegação de eventos ao document.body UMA ÚNICA VEZ
-                document.body.addEventListener('click', (event) => { // Alterado de appRoot para document.body
+                document.body.addEventListener('click', (event) => {
                     const target = event.target;
+                    console.log('Clicked target:', target); // Log do elemento clicado
 
                     // Usando closest() para encontrar o botão correspondente, mesmo se o clique for em um filho
-                    const clickedButton = target.closest('.add-workout-btn, .edit-workout-btn, .delete-workout-btn, #logout-btn, #clear-error-btn, #open-diet-modal-btn, #open-weight-modal-btn, #toggle-auth-mode-btn'); // Adicionado #toggle-auth-mode-btn
+                    const clickedButton = target.closest('.add-workout-btn, .edit-workout-btn, .delete-workout-btn, #logout-btn, #clear-error-btn, #open-diet-modal-btn, #open-weight-modal-btn, #toggle-auth-mode-btn');
 
                     if (clickedButton) {
+                        console.log('Detected clicked button:', clickedButton); // Log do botão detectado
                         if (clickedButton.matches('.add-workout-btn')) {
                             openAddWorkoutModal(clickedButton.dataset.day);
                         } else if (clickedButton.matches('.edit-workout-btn')) {
@@ -966,7 +982,7 @@
                             openDietModal();
                         } else if (clickedButton.matches('#open-weight-modal-btn')) {
                             openWeightModal();
-                        } else if (clickedButton.matches('#toggle-auth-mode-btn')) { // Lida com o botão de alternar login/cadastro
+                        } else if (clickedButton.matches('#toggle-auth-mode-btn')) {
                             isLoginMode = !isLoginMode;
                             renderApp();
                         }
