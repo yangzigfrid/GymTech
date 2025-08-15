@@ -515,30 +515,37 @@
                 }
 
                 const form = event.target;
-                const name = form.workoutName.value; // Pega o valor do select
-                const description = form.workoutDescription.value;
+                const workoutType = form.workoutName.value; // Pega o valor do select de tipo de treino
+                const exerciseName = form.workoutExercise.value; // Pega o valor do select de exercício
 
-                if (!name.trim() || name === "Selecione um treino") { // Validação do nome do treino
+                if (!workoutType.trim() || workoutType === "Selecione o treino") {
                     showTempMessage('Por favor, selecione um tipo de treino.', 'error');
                     return;
                 }
+                if (!exerciseName.trim() || exerciseName === "Selecione o Exercício") {
+                    showTempMessage('Por favor, selecione um exercício.', 'error');
+                    return;
+                }
+
+                // Constrói a descrição concisa para exibição e salvamento
+                let descriptionToSave = `${workoutType}: ${exerciseName}`;
 
                 try {
                     const workoutsCollectionRef = db.collection(`artifacts/${appId}/users/${userId}/workouts`);
                     if (editingWorkout) {
                         // Modo de Edição: Atualiza um treino existente
                         const workoutDocRef = workoutsCollectionRef.doc(editingWorkout.id);
-                        await workoutDocRef.update({ name, description });
+                        await workoutDocRef.update({ name: workoutType, description: descriptionToSave });
 
                         // Atualiza o estado local para refletir as mudanças na UI
                         workouts[currentDay] = workouts[currentDay].map(w =>
-                            w.id === editingWorkout.id ? { ...w, name, description } : w
+                            w.id === editingWorkout.id ? { ...w, name: workoutType, description: descriptionToSave } : w
                         );
                     } else {
                         // Modo de Adição: Cria um novo treino
                         const newWorkoutDocRef = await workoutsCollectionRef.add({
-                            name,
-                            description,
+                            name: workoutType,
+                            description: descriptionToSave,
                             day: currentDay,
                             createdAt: firebase.firestore.FieldValue.serverTimestamp() // Adiciona timestamp do servidor
                         });
@@ -546,8 +553,8 @@
                         // Adiciona o novo treino ao estado local
                         workouts[currentDay].push({
                             id: newWorkoutDocRef.id,
-                            name,
-                            description,
+                            name: workoutType,
+                            description: descriptionToSave,
                         });
                     }
                     closeWorkoutModal(); // Fecha o modal após salvar
@@ -887,8 +894,11 @@
                     const selectedWorkoutType = editingWorkout.name;
                     if (workoutDetails[selectedWorkoutType]) {
                         exerciseSelectDisabled = '';
+                        // Extract just the exercise name from the saved description for pre-selection
+                        const savedExerciseName = editingWorkout.description.split(':')[1] ? editingWorkout.description.split(':')[1].trim() : '';
+
                         workoutDetails[selectedWorkoutType].exercises.forEach(ex => {
-                            const selected = (editingWorkout.description.startsWith(ex.name)) ? 'selected' : ''; // Check if description starts with exercise name
+                            const selected = (savedExerciseName.startsWith(ex.name)) ? 'selected' : ''; // Check if saved description starts with exercise name
                             exerciseOptionsHtml += `<option value="${ex.name}" ${selected}>${ex.name}</option>`;
                         });
 
@@ -903,7 +913,19 @@
                             initialMachinesHtml = '<p class="text-gray-600 dark:text-gray-400 italic">Nenhuma máquina específica listada para este treino.</p>';
                         }
                     }
-                    initialDescription = editingWorkout.description; // Keep original description for editing
+                    // When editing, the textarea should show the full description from workoutDetails
+                    const workoutTypeForEdit = editingWorkout.name;
+                    const exerciseNameForEdit = editingWorkout.description.split(':')[1] ? editingWorkout.description.split(':')[1].trim() : '';
+                    if (workoutDetails[workoutTypeForEdit] && workoutDetails[workoutTypeForEdit].exercises) {
+                        const fullExerciseDetail = workoutDetails[workoutTypeForEdit].exercises.find(ex => ex.name === exerciseNameForEdit);
+                        if (fullExerciseDetail) {
+                            initialDescription = `${fullExerciseDetail.name}: ${fullExerciseDetail.description}`;
+                        } else {
+                            initialDescription = editingWorkout.description; // Fallback if not found
+                        }
+                    } else {
+                        initialDescription = editingWorkout.description; // Fallback if workout type not found
+                    }
                 }
 
 
@@ -1004,10 +1026,22 @@
                     // Initial call to set up exercises and machines if editing
                     if (editingWorkout) {
                         const selectedWorkoutType = editingWorkout.name;
-                        const initialExerciseName = editingWorkout.description.split(':')[0].trim(); // Assuming exercise name is before ':'
-                        updateExerciseAndMachines(selectedWorkoutType, initialExerciseName);
+                        // Extract just the exercise name from the saved description for pre-selection
+                        const savedExerciseName = editingWorkout.description.split(':')[1] ? editingWorkout.description.split(':')[1].trim() : '';
+                        updateExerciseAndMachines(selectedWorkoutType, savedExerciseName);
                         // Ensure description is correctly set for editing
-                        workoutDescriptionTextarea.value = editingWorkout.description;
+                        const workoutTypeForEdit = editingWorkout.name;
+                        const exerciseNameForEdit = editingWorkout.description.split(':')[1] ? editingWorkout.description.split(':')[1].trim() : '';
+                        if (workoutDetails[workoutTypeForEdit] && workoutDetails[workoutTypeForEdit].exercises) {
+                            const fullExerciseDetail = workoutDetails[workoutTypeForEdit].exercises.find(ex => ex.name === exerciseNameForEdit);
+                            if (fullExerciseDetail) {
+                                workoutDescriptionTextarea.value = `${fullExerciseDetail.name}: ${fullExerciseDetail.description}`;
+                            } else {
+                                workoutDescriptionTextarea.value = editingWorkout.description; // Fallback if not found
+                            }
+                        } else {
+                            workoutDescriptionTextarea.value = editingWorkout.description; // Fallback if workout type not found
+                        }
                     } else {
                         // For adding new workout, ensure exercises and machines are reset
                         updateExerciseAndMachines(workoutNameSelect.value);
