@@ -977,13 +977,14 @@
 
                 if (editingWorkout) {
                     const selectedWorkoutType = editingWorkout.name;
-                    const currentWorkoutDetail = workoutDetails[selectedWorkoutType]; // Get the detail once
+                    const currentWorkoutDetail = workoutDetails[selectedWorkoutType];
+
+                    // Safely get savedExerciseName, ensuring it's a string
+                    const savedExerciseName = typeof editingWorkout.description === 'string' ? editingWorkout.description : '';
 
                     if (currentWorkoutDetail) { // Check if the workout type exists in workoutDetails
                         exerciseSelectDisabled = '';
-                        // Extract just the exercise name from the saved description for pre-selection
-                        const savedExerciseName = editingWorkout.description; // Description is now just the exercise name
-                        currentWorkoutDetail.exercises.forEach(ex => { // Access exercises safely here
+                        currentWorkoutDetail.exercises.forEach(ex => {
                             const selected = (savedExerciseName === ex.name) ? 'selected' : '';
                             exerciseOptionsHtml += `<option value="${ex.name}" ${selected}>${ex.name}</option>`;
                         });
@@ -1000,19 +1001,19 @@
                         }
 
                         // When editing, the textarea should show the full description from workoutDetails
-                        const exerciseNameForEdit = editingWorkout.description; // Description is now just the exercise name
+                        const exerciseNameForEdit = savedExerciseName; // It's already the exercise name
                         const fullExerciseDetail = currentWorkoutDetail.exercises.find(ex => ex.name === exerciseNameForEdit);
                         if (fullExerciseDetail) {
                             initialDescription = `${fullExerciseDetail.name}: ${fullExerciseDetail.description}`;
                         } else {
-                            initialDescription = editingWorkout.description; // Fallback if not found
+                            initialDescription = savedExerciseName; // Fallback if not found
                         }
                     } else {
                         // Fallback if editingWorkout.name is not a valid workout type
                         exerciseSelectDisabled = 'disabled';
                         exerciseOptionsHtml = '<option value="">Selecione o Exercício</option>';
                         initialMachinesHtml = '<p class="text-gray-600 dark:text-gray-400 italic">Tipo de treino inválido ou não encontrado.</p>';
-                        initialDescription = editingWorkout.description; // Keep the original saved description
+                        initialDescription = savedExerciseName; // Keep the original saved description
                     }
                 }
 
