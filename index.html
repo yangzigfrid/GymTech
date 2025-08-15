@@ -942,28 +942,33 @@
                 });
 
                 // Adiciona o listener de delegação de eventos ao appRoot UMA ÚNICA VEZ
-                appRoot.onclick = (event) => {
+                appRoot.addEventListener('click', (event) => { // Usando addEventListener para melhor prática
                     const target = event.target;
 
-                    if (target.matches('.add-workout-btn')) {
-                        openAddWorkoutModal(target.dataset.day);
-                    } else if (target.matches('.edit-workout-btn')) {
-                        const day = target.dataset.day;
-                        const workoutId = target.dataset.workoutId;
-                        const workout = workouts[day].find(w => w.id === workoutId);
-                        if (workout) openEditWorkoutModal(day, workout);
-                    } else if (target.matches('.delete-workout-btn')) {
-                        handleDeleteWorkoutClick(target.dataset.day, target.dataset.workoutId);
-                    } else if (target.matches('#logout-btn')) {
-                        handleLogout();
-                    } else if (target.matches('#clear-error-btn')) {
-                        clearAuthError();
-                    } else if (target.matches('#open-diet-modal-btn')) {
-                        openDietModal();
-                    } else if (target.matches('#open-weight-modal-btn')) {
-                        openWeightModal();
+                    // Usando closest() para encontrar o botão correspondente, mesmo se o clique for em um filho
+                    const clickedButton = target.closest('.add-workout-btn, .edit-workout-btn, .delete-workout-btn, #logout-btn, #clear-error-btn, #open-diet-modal-btn, #open-weight-modal-btn');
+
+                    if (clickedButton) {
+                        if (clickedButton.matches('.add-workout-btn')) {
+                            openAddWorkoutModal(clickedButton.dataset.day);
+                        } else if (clickedButton.matches('.edit-workout-btn')) {
+                            const day = clickedButton.dataset.day;
+                            const workoutId = clickedButton.dataset.workoutId;
+                            const workout = workouts[day].find(w => w.id === workoutId);
+                            if (workout) openEditWorkoutModal(day, workout);
+                        } else if (clickedButton.matches('.delete-workout-btn')) {
+                            handleDeleteWorkoutClick(clickedButton.dataset.day, clickedButton.dataset.workoutId);
+                        } else if (clickedButton.matches('#logout-btn')) {
+                            handleLogout();
+                        } else if (clickedButton.matches('#clear-error-btn')) {
+                            clearAuthError();
+                        } else if (clickedButton.matches('#open-diet-modal-btn')) {
+                            openDietModal();
+                        } else if (clickedButton.matches('#open-weight-modal-btn')) {
+                            openWeightModal();
+                        }
                     }
-                };
+                });
             };
         })();
     </script>
