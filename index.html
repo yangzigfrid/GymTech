@@ -977,38 +977,42 @@
 
                 if (editingWorkout) {
                     const selectedWorkoutType = editingWorkout.name;
-                    if (workoutDetails[selectedWorkoutType]) {
+                    const currentWorkoutDetail = workoutDetails[selectedWorkoutType]; // Get the detail once
+
+                    if (currentWorkoutDetail) { // Check if the workout type exists in workoutDetails
                         exerciseSelectDisabled = '';
                         // Extract just the exercise name from the saved description for pre-selection
                         const savedExerciseName = editingWorkout.description; // Description is now just the exercise name
-                        workoutDetails[selectedWorkoutType].exercises.forEach(ex => {
-                            const selected = (savedExerciseName === ex.name) ? 'selected' : ''; // Check if saved description matches exercise name
+                        currentWorkoutDetail.exercises.forEach(ex => { // Access exercises safely here
+                            const selected = (savedExerciseName === ex.name) ? 'selected' : '';
                             exerciseOptionsHtml += `<option value="${ex.name}" ${selected}>${ex.name}</option>`;
                         });
 
                         // Populate machines for editing mode
-                        if (workoutDetails[selectedWorkoutType].machines && workoutDetails[selectedWorkoutType].machines.length > 0) {
+                        if (currentWorkoutDetail.machines && currentWorkoutDetail.machines.length > 0) {
                             initialMachinesHtml = '<ul class="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">';
-                            workoutDetails[selectedWorkoutType].machines.forEach(machine => {
+                            currentWorkoutDetail.machines.forEach(machine => {
                                 initialMachinesHtml += `<li><span class="font-semibold">${machine.name}:</span> ${machine.description}</li>`;
                             });
                             initialMachinesHtml += '</ul>';
                         } else {
                             initialMachinesHtml = '<p class="text-gray-600 dark:text-gray-400 italic">Nenhuma máquina específica listada para este treino.</p>';
                         }
-                    }
-                    // When editing, the textarea should show the full description from workoutDetails
-                    const workoutTypeForEdit = editingWorkout.name;
-                    const exerciseNameForEdit = editingWorkout.description; // Description is now just the exercise name
-                    if (workoutDetails[workoutTypeForEdit] && workoutDetails[workoutTypeForEdit].exercises) {
-                        const fullExerciseDetail = workoutDetails[workoutTypeForEdit].exercises.find(ex => ex.name === exerciseNameForEdit);
+
+                        // When editing, the textarea should show the full description from workoutDetails
+                        const exerciseNameForEdit = editingWorkout.description; // Description is now just the exercise name
+                        const fullExerciseDetail = currentWorkoutDetail.exercises.find(ex => ex.name === exerciseNameForEdit);
                         if (fullExerciseDetail) {
                             initialDescription = `${fullExerciseDetail.name}: ${fullExerciseDetail.description}`;
                         } else {
                             initialDescription = editingWorkout.description; // Fallback if not found
                         }
                     } else {
-                        initialDescription = editingWorkout.description; // Fallback if workout type not found
+                        // Fallback if editingWorkout.name is not a valid workout type
+                        exerciseSelectDisabled = 'disabled';
+                        exerciseOptionsHtml = '<option value="">Selecione o Exercício</option>';
+                        initialMachinesHtml = '<p class="text-gray-600 dark:text-gray-400 italic">Tipo de treino inválido ou não encontrado.</p>';
+                        initialDescription = editingWorkout.description; // Keep the original saved description
                     }
                 }
 
@@ -1084,16 +1088,18 @@
                         let exerciseOptionsHtml = '<option value="">Selecione o Exercício</option>';
                         let machinesHtml = '<p class="text-gray-600 dark:text-gray-400 italic">Selecione o tipo de treino para ver as máquinas.</p>';
 
-                        if (workoutDetails[selectedWorkoutType]) {
-                            workoutDetails[selectedWorkoutType].exercises.forEach(ex => {
+                        const currentWorkoutDetail = workoutDetails[selectedWorkoutType];
+
+                        if (currentWorkoutDetail) {
+                            currentWorkoutDetail.exercises.forEach(ex => {
                                 const selected = (initialExerciseName === ex.name) ? 'selected' : '';
                                 exerciseOptionsHtml += `<option value="${ex.name}" ${selected}>${ex.name}</option>`;
                             });
                             workoutExerciseSelect.disabled = false;
 
-                            if (workoutDetails[selectedWorkoutType].machines && workoutDetails[selectedWorkoutType].machines.length > 0) {
+                            if (currentWorkoutDetail.machines && currentWorkoutDetail.machines.length > 0) {
                                 machinesHtml = '<ul class="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">';
-                                workoutDetails[selectedWorkoutType].machines.forEach(machine => {
+                                currentWorkoutDetail.machines.forEach(machine => {
                                     machinesHtml += `<li><span class="font-semibold">${machine.name}:</span> ${machine.description}</li>`;
                                 });
                                 machinesHtml += '</ul>';
@@ -1110,7 +1116,6 @@
                     // Initial call to set up exercises and machines if editing
                     if (editingWorkout) {
                         const selectedWorkoutType = editingWorkout.name;
-                        // Extract just the exercise name from the saved description for pre-selection
                         const savedExerciseName = editingWorkout.description; // Description is now just the exercise name
                         updateExerciseAndMachines(selectedWorkoutType, savedExerciseName);
                         // Ensure description is correctly set for editing
