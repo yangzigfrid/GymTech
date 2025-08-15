@@ -568,7 +568,14 @@
                     }
                 } catch (error) {
                     console.error("Erro ao salvar treino:", error);
-                    showTempMessage('Erro ao salvar treino. Tente novamente.', 'error');
+                    let errorMessage = 'Erro ao salvar treino. Tente novamente.';
+                    if (error.code) {
+                        errorMessage += ` Código: ${error.code}.`;
+                    }
+                    if (error.message) {
+                        errorMessage += ` Mensagem: ${error.message}.`;
+                    }
+                    showTempMessage(errorMessage, 'error');
                 }
             }
 
@@ -604,7 +611,14 @@
                         );
                     } catch (error) {
                         console.error("Erro ao excluir treino:", error);
-                        showTempMessage('Erro ao excluir treino. Tente novamente.', 'error');
+                        let errorMessage = 'Erro ao excluir treino. Tente novamente.';
+                        if (error.code) {
+                            errorMessage += ` Código: ${error.code}.`;
+                        }
+                        if (error.message) {
+                            errorMessage += ` Mensagem: ${error.message}.`;
+                        }
+                        showTempMessage(errorMessage, 'error');
                     }
                 }
                 isConfirmationModalOpen = false; // Fecha o modal de confirmação
@@ -672,7 +686,14 @@
                     renderMainApp();
                 } catch (error) {
                     console.error("Erro ao salvar dieta:", error);
-                    showTempMessage('Erro ao salvar dieta. Tente novamente.', 'error');
+                    let errorMessage = 'Erro ao salvar dieta. Tente novamente.';
+                    if (error.code) {
+                        errorMessage += ` Código: ${error.code}.`;
+                    }
+                    if (error.message) {
+                        errorMessage += ` Mensagem: ${error.message}.`;
+                    }
+                    showTempMessage(errorMessage, 'error');
                 }
             }
 
@@ -727,7 +748,14 @@
                     renderMainApp();
                 } catch (error) {
                     console.error("Erro ao salvar peso:", error);
-                    showTempMessage('Erro ao salvar peso. Tente novamente.', 'error');
+                    let errorMessage = 'Erro ao salvar peso. Tente novamente.';
+                    if (error.code) {
+                        errorMessage += ` Código: ${error.code}.`;
+                    }
+                    if (error.message) {
+                        errorMessage += ` Mensagem: ${error.message}.`;
+                    }
+                    showTempMessage(errorMessage, 'error');
                 }
             }
 
