@@ -85,20 +85,40 @@
         </div>
     </div>
 
-    <!-- Back4App (Parse SDK) CDN - Carregado antes do script principal -->
-    <script src="https://unpkg.com/parse/dist/parse.min.js"></script>
+    <!-- Firebase SDKs - Carregados antes do script principal -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics-compat.js"></script>
+
 
     <script>
         // Use uma IIFE (Immediately Invoked Function Expression) para encapsular todo o código JavaScript
         // Isso ajuda a evitar poluição do escopo global.
         (function() {
-            // ATENÇÃO: Substitua 'YOUR_BACK4APP_APP_ID' e 'YOUR_BACK4APP_JAVASCRIPT_KEY' pelas suas chaves reais do Back4App.
-            // Você pode encontrá-las no seu painel Back4App, em App Settings > Core Settings.
-            const BACK4APP_APP_ID = "YOUR_BACK4APP_APP_ID";
-            const BACK4APP_JAVASCRIPT_KEY = "YOUR_BACK4APP_JAVASCRIPT_KEY";
+            // Firebase Configuration - Usando as informações fornecidas
+            const firebaseConfig = {
+                apiKey: "AIzaSyD5Bc5ex-R-jZF3sw2zSf-OJaS1dfn1e1c",
+                authDomain: "gymtech-2f998.firebaseapp.com",
+                projectId: "gymtech-2f998",
+                storageBucket: "gymtech-2f998.firebasestorage.app",
+                messagingSenderId: "831193221171",
+                appId: "1:831193221171:web:41394939016959052f7b46",
+                measurementId: "G-MHEF18CNYY"
+            };
 
-            // --- Variáveis de Estado da Aplicação (substituindo o useState do React) ---
-            let currentUser = null; // Armazena o objeto do usuário logado do Back4App
+            // Inicializa Firebase
+            const app = firebase.initializeApp(firebaseConfig);
+            const auth = firebase.auth();
+            const db = firebase.firestore();
+            const analytics = firebase.analytics(); // Inicializa o Analytics, se necessário
+
+            // Definindo um ID de aplicativo padrão para o Firestore, se não for fornecido pelo ambiente
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'gym-app-default';
+
+            // --- Variáveis de Estado da Aplicação ---
+            let currentUser = null; // Armazena o objeto do usuário logado do Firebase
+            let userId = null; // Armazena o UID do usuário para caminhos do Firestore
             let workouts = { // Armazena os treinos organizados por dia
                 'Segunda-feira': [],
                 'Terça-feira': [],
@@ -120,12 +140,7 @@
             let isDietModalOpen = false;
             let isWeightModalOpen = false;
             let isConfirmationModalOpen = false;
-            let isLoginMode = true; // MOVIDO PARA O ESCOPO GLOBAL PARA PERSISTIR O ESTADO
-
-            // Referências para as classes Parse (serão inicializadas após o SDK carregar e a aplicação iniciar)
-            let WorkoutParseClass = null;
-            let DietParseClass = null;
-            let WeightParseClass = null;
+            let isLoginMode = true; // Estado para alternar entre Login e Cadastro
 
             // Elemento raiz onde a aplicação será renderizada
             const appRoot = document.getElementById('app-root');
@@ -227,61 +242,29 @@
                 renderApp(); // Re-renderiza para remover a mensagem da UI
             }
 
-            // --- Funções de Autenticação com Back4App ---
+            // --- Funções de Autenticação com Firebase ---
 
             /**
-             * Tenta fazer login de um usuário com e-mail e senha no Back4App.
+             * Tenta fazer login de um usuário com e-mail e senha no Firebase.
              * @param {string} email - O e-mail do usuário.
              * @param {string} password - A senha do usuário.
              */
             async function handleLogin(email, password) {
-                // Verifica se o SDK do Parse e o objeto de usuário estão disponíveis
-                if (!window.Parse || !window.Parse.User) {
-                    showTempMessage('SDK do Back4App não carregado. Tente novamente.', 'error');
-                    return;
-                }
                 try {
                     clearAuthError(); // Limpa quaisquer erros anteriores
-                    const loggedInUser = await window.Parse.User.logIn(email, password);
-                    currentUser = loggedInUser; // Define o usuário logado
+                    const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                    currentUser = userCredential.user;
+                    userId = currentUser.uid;
                     await loadUserData(currentUser); // Carrega os dados do usuário após o login
                     renderApp(); // Re-renderiza para a tela principal da aplicação
                 } catch (error) {
                     console.error("Erro ao fazer login:", error);
                     let errorMessage = 'Erro ao fazer login. Verifique seu e-mail e senha.';
-                    if (error.code === 101) { // Código de erro do Parse para credenciais inválidas
-                        errorMessage = 'E-mail ou senha inválidos.';
-                    }
-                    showTempMessage(errorMessage, 'error'); // Exibe a mensagem de erro
-                }
-            }
-
-            /**
-             * Tenta registrar um novo usuário com e-mail e senha no Back4App.
-             * @param {string} email - O e-mail do novo usuário.
-             * @param {string} password - A senha do novo usuário.
-             */
-            async function handleRegister(email, password) {
-                if (!window.Parse || !window.Parse.User) {
-                    showTempMessage('SDK do Back4App não carregado. Tente novamente.', 'error');
-                    return;
-                }
-                try {
-                    clearAuthError(); // Limpa quaisquer erros anteriores
-                    const newUser = new window.Parse.User();
-                    newUser.set("username", email); // O username no Parse é frequentemente o e-mail
-                    newUser.set("email", email);
-                    newUser.set("password", password);
-                    const registeredUser = await newUser.signUp();
-                    currentUser = registeredUser; // Define o usuário recém-registrado como logado
-                    // Não há dados para carregar para um novo usuário, mas ele está logado e pronto para inserir dados
-                    renderApp(); // Re-renderiza para a tela principal da aplicação
-                } catch (error) {
-                    console.error("Erro ao registrar:", error);
-                    let errorMessage = 'Erro ao registrar. Tente novamente.';
-                    if (error.code === 202 || error.code === 203) { // Códigos de erro do Parse para e-mail/usuário já em uso
-                        errorMessage = 'Este e-mail já está em uso.';
-                    } else if (error.code === 125) { // Código de erro do Parse para formato de e-mail inválido
+                    if (error.code === 'auth/user-not-found') {
+                        errorMessage = 'Usuário não encontrado.';
+                    } else if (error.code === 'auth/wrong-password') {
+                        errorMessage = 'Senha incorreta.';
+                    } else if (error.code === 'auth/invalid-email') {
                         errorMessage = 'Formato de e-mail inválido.';
                     }
                     showTempMessage(errorMessage, 'error'); // Exibe a mensagem de erro
@@ -289,16 +272,40 @@
             }
 
             /**
-             * Realiza o logout do usuário atual do Back4App.
+             * Tenta registrar um novo usuário com e-mail e senha no Firebase.
+             * @param {string} email - O e-mail do novo usuário.
+             * @param {string} password - A senha do novo usuário.
+             */
+            async function handleRegister(email, password) {
+                try {
+                    clearAuthError(); // Limpa quaisquer erros anteriores
+                    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                    currentUser = userCredential.user;
+                    userId = currentUser.uid;
+                    // Não há dados para carregar para um novo usuário, mas ele está logado e pronto para inserir dados
+                    renderApp(); // Re-renderiza para a tela principal da aplicação
+                } catch (error) {
+                    console.error("Erro ao registrar:", error);
+                    let errorMessage = 'Erro ao registrar. Tente novamente.';
+                    if (error.code === 'auth/email-already-in-use') {
+                        errorMessage = 'Este e-mail já está em uso.';
+                    } else if (error.code === 'auth/weak-password') {
+                        errorMessage = 'A senha deve ter pelo menos 6 caracteres.';
+                    } else if (error.code === 'auth/invalid-email') {
+                        errorMessage = 'Formato de e-mail inválido.';
+                    }
+                    showTempMessage(errorMessage, 'error'); // Exibe a mensagem de erro
+                }
+            }
+
+            /**
+             * Realiza o logout do usuário atual do Firebase.
              */
             async function handleLogout() {
-                if (!window.Parse || !window.Parse.User) {
-                    showTempMessage('SDK do Back4App não carregado. Tente novamente.', 'error');
-                    return;
-                }
                 try {
-                    await window.Parse.User.logOut(); // Faz logout do Parse
+                    await auth.signOut(); // Faz logout do Firebase
                     currentUser = null; // Limpa o usuário atual
+                    userId = null;
                     // Limpa o estado local de treinos, dieta e peso para a próxima sessão
                     workouts = {
                         'Segunda-feira': [], 'Terça-feira': [], 'Quarta-feira': [], 'Quinta-feira': [],
@@ -313,57 +320,52 @@
                 }
             }
 
-            // --- Funções para Carregar Dados do Back4App ---
+            // --- Funções para Carregar Dados do Firebase Firestore ---
 
             /**
-             * Carrega os dados (treinos, dieta, peso) do usuário logado do Back4App.
-             * @param {object} userObj - O objeto do usuário Parse atual.
+             * Carrega os dados (treinos, dieta, peso) do usuário logado do Firestore.
+             * @param {object} userObj - O objeto do usuário Firebase atual.
              */
             async function loadUserData(userObj) {
-                // Garante que o usuário e as classes Parse estejam definidos
-                if (!userObj || !WorkoutParseClass || !DietParseClass || !WeightParseClass) return;
+                if (!userObj || !userObj.uid) return;
 
                 try {
                     // 1. Carrega Treinos
-                    const workoutsQuery = new window.Parse.Query(WorkoutParseClass);
-                    workoutsQuery.equalTo("user", userObj); // Filtra treinos pelo usuário atual
-                    const userWorkouts = await workoutsQuery.find();
-                    const loadedWorkouts = { // Reinicia a estrutura de treinos
+                    const workoutsCollectionRef = db.collection(`artifacts/${appId}/users/${userObj.uid}/workouts`);
+                    const workoutsSnapshot = await workoutsCollectionRef.get();
+                    const loadedWorkouts = {
                         'Segunda-feira': [], 'Terça-feira': [], 'Quarta-feira': [], 'Quinta-feira': [],
                         'Sexta-feira': [], 'Sábado': [], 'Domingo': [],
                     };
-                    userWorkouts.forEach(w => {
-                        const day = w.get('day'); // Obtém o dia do treino
-                        if (loadedWorkouts[day]) { // Adiciona o treino ao dia correto
+                    workoutsSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        const day = data.day;
+                        if (loadedWorkouts[day]) {
                             loadedWorkouts[day].push({
-                                id: w.id, // ID único do objeto Parse
-                                name: w.get('name'),
-                                description: w.get('description'),
-                                parseObject: w // Armazena a referência ao objeto Parse original para futuras atualizações/exclusões
+                                id: doc.id, // ID do documento Firestore
+                                name: data.name,
+                                description: data.description,
                             });
                         }
                     });
-                    workouts = loadedWorkouts; // Atualiza o estado global de treinos
+                    workouts = loadedWorkouts;
 
                     // 2. Carrega Dieta
-                    const dietQuery = new window.Parse.Query(DietParseClass);
-                    dietQuery.equalTo("user", userObj);
-                    const userDiet = await dietQuery.first(); // Busca a primeira (e única) entrada de dieta do usuário
-                    if (userDiet) {
-                        diet = userDiet.get('plan');
+                    const dietDocRef = db.collection(`artifacts/${appId}/users/${userObj.uid}/diet`).doc('userDietDoc');
+                    const dietDoc = await dietDocRef.get();
+                    if (dietDoc.exists) {
+                        diet = dietDoc.data().plan;
                     } else {
-                        diet = ''; // Limpa a dieta se não houver nenhuma
+                        diet = '';
                     }
 
                     // 3. Carrega Peso (a entrada mais recente)
-                    const weightQuery = new window.Parse.Query(WeightParseClass);
-                    weightQuery.equalTo("user", userObj);
-                    weightQuery.descending("createdAt"); // Ordena para pegar o mais recente
-                    const userWeight = await weightQuery.first(); // Busca a entrada de peso mais recente
-                    if (userWeight) {
-                        weight = userWeight.get('value');
+                    const weightsCollectionRef = db.collection(`artifacts/${appId}/users/${userObj.uid}/weights`);
+                    const weightQuerySnapshot = await weightsCollectionRef.orderBy("createdAt", "desc").limit(1).get();
+                    if (!weightQuerySnapshot.empty) {
+                        weight = weightQuerySnapshot.docs[0].data().value;
                     } else {
-                        weight = ''; // Limpa o peso se não houver nenhum
+                        weight = '';
                     }
 
                     renderApp(); // Re-renderiza a UI após carregar todos os dados
@@ -409,14 +411,13 @@
             }
 
             /**
-             * Lida com o salvamento (adição ou edição) de um treino no Back4App.
+             * Lida com o salvamento (adição ou edição) de um treino no Firestore.
              * @param {Event} event - O evento de submissão do formulário.
              */
             async function handleSaveWorkout(event) {
                 event.preventDefault(); // Impede o recarregamento da página
-                // Verifica se a classe Parse do treino está disponível
-                if (!WorkoutParseClass) {
-                    showTempMessage('SDK do Back4App não carregado. Tente novamente.', 'error');
+                if (!userId) {
+                    showTempMessage('Usuário não autenticado. Faça login para salvar treinos.', 'error');
                     return;
                 }
 
@@ -430,12 +431,11 @@
                 }
 
                 try {
+                    const workoutsCollectionRef = db.collection(`artifacts/${appId}/users/${userId}/workouts`);
                     if (editingWorkout) {
                         // Modo de Edição: Atualiza um treino existente
-                        const workoutObject = editingWorkout.parseObject;
-                        workoutObject.set('name', name);
-                        workoutObject.set('description', description);
-                        await workoutObject.save(); // Salva as alterações no Back4App
+                        const workoutDocRef = workoutsCollectionRef.doc(editingWorkout.id);
+                        await workoutDocRef.update({ name, description });
 
                         // Atualiza o estado local para refletir as mudanças na UI
                         workouts[currentDay] = workouts[currentDay].map(w =>
@@ -443,19 +443,18 @@
                         );
                     } else {
                         // Modo de Adição: Cria um novo treino
-                        const newWorkoutObject = new WorkoutParseClass();
-                        newWorkoutObject.set('name', name);
-                        newWorkoutObject.set('description', description);
-                        newWorkoutObject.set('day', currentDay);
-                        newWorkoutObject.set('user', currentUser); // Vincula o treino ao usuário atual
-                        await newWorkoutObject.save(); // Salva o novo treino no Back4App
+                        const newWorkoutDocRef = await workoutsCollectionRef.add({
+                            name,
+                            description,
+                            day: currentDay,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp() // Adiciona timestamp do servidor
+                        });
 
                         // Adiciona o novo treino ao estado local
                         workouts[currentDay].push({
-                            id: newWorkoutObject.id,
+                            id: newWorkoutDocRef.id,
                             name,
                             description,
-                            parseObject: newWorkoutObject // Armazena a referência para o objeto Parse
                         });
                     }
                     closeWorkoutModal(); // Fecha o modal após salvar
@@ -477,24 +476,22 @@
             }
 
             /**
-             * Confirma e executa a exclusão de um treino no Back4App.
+             * Confirma e executa a exclusão de um treino no Firestore.
              */
             async function confirmDeleteWorkout() {
-                if (!WorkoutParseClass) {
-                    showTempMessage('SDK do Back4App não carregado. Tente novamente.', 'error');
+                if (!userId) {
+                    showTempMessage('Usuário não autenticado. Faça login para excluir treinos.', 'error');
                     return;
                 }
                 if (workoutToDelete) {
                     try {
-                        // Encontra o objeto Parse correspondente ao treino a ser excluído
-                        const workoutObj = workouts[workoutToDelete.day].find(w => w.id === workoutToDelete.workoutId);
-                        if (workoutObj && workoutObj.parseObject) {
-                            await workoutObj.parseObject.destroy(); // Exclui o treino do Back4App
-                            // Remove o treino do estado local
-                            workouts[workoutToDelete.day] = workouts[workoutToDelete.day].filter(
-                                workout => workout.id !== workoutToDelete.workoutId
-                            );
-                        }
+                        const workoutDocRef = db.collection(`artifacts/${appId}/users/${userId}/workouts`).doc(workoutToDelete.workoutId);
+                        await workoutDocRef.delete(); // Exclui o treino do Firestore
+
+                        // Remove o treino do estado local
+                        workouts[workoutToDelete.day] = workouts[workoutToDelete.day].filter(
+                            workout => workout.id !== workoutToDelete.workoutId
+                        );
                     } catch (error) {
                         console.error("Erro ao excluir treino:", error);
                         showTempMessage('Erro ao excluir treino. Tente novamente.', 'error');
@@ -533,33 +530,21 @@
             }
 
             /**
-             * Lida com o salvamento (adição ou edição) do plano de dieta no Back4App.
+             * Lida com o salvamento (adição ou edição) do plano de dieta no Firestore.
              * @param {Event} event - O evento de submissão do formulário.
              */
             async function handleSaveDiet(event) {
                 event.preventDefault();
-                if (!DietParseClass) {
-                    showTempMessage('SDK do Back4App não carregado. Tente novamente.', 'error');
+                if (!userId) {
+                    showTempMessage('Usuário não autenticado. Faça login para salvar a dieta.', 'error');
                     return;
                 }
                 const dietPlan = event.target.dietPlan.value;
 
                 try {
-                    const dietQuery = new window.Parse.Query(DietParseClass);
-                    dietQuery.equalTo("user", currentUser); // Busca a dieta do usuário atual
-                    let userDietObject = await dietQuery.first();
+                    const dietDocRef = db.collection(`artifacts/${appId}/users/${userId}/diet`).doc('userDietDoc');
+                    await dietDocRef.set({ plan: dietPlan }, { merge: true }); // Usa set com merge para criar ou atualizar
 
-                    if (userDietObject) {
-                        // Se já existe uma dieta, atualiza
-                        userDietObject.set('plan', dietPlan);
-                        await userDietObject.save();
-                    } else {
-                        // Se não existe, cria uma nova
-                        userDietObject = new DietParseClass();
-                        userDietObject.set('user', currentUser);
-                        userDietObject.set('plan', dietPlan);
-                        await userDietObject.save();
-                    }
                     diet = dietPlan; // Atualiza o estado local
                     closeDietModal(); // Fecha o modal
                 } catch (error) {
@@ -587,13 +572,13 @@
             }
 
             /**
-             * Lida com o salvamento de um novo registro de peso no Back4App.
+             * Lida com o salvamento de um novo registro de peso no Firestore.
              * @param {Event} event - O evento de submissão do formulário.
              */
             async function handleSaveWeight(event) {
                 event.preventDefault();
-                if (!WeightParseClass) {
-                    showTempMessage('SDK do Back4App não carregado. Tente novamente.', 'error');
+                if (!userId) {
+                    showTempMessage('Usuário não autenticado. Faça login para registrar o peso.', 'error');
                     return;
                 }
                 const newWeightValue = parseFloat(event.target.newWeight.value);
@@ -605,10 +590,10 @@
 
                 try {
                     // Sempre cria uma nova entrada de peso (para manter um histórico)
-                    const newWeightObject = new WeightParseClass();
-                    newWeightObject.set('value', newWeightValue);
-                    newWeightObject.set('user', currentUser); // Vincula ao usuário
-                    await newWeightObject.save(); // Salva no Back4App
+                    await db.collection(`artifacts/${appId}/users/${userId}/weights`).add({
+                        value: newWeightValue,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp() // Adiciona timestamp do servidor
+                    });
 
                     weight = newWeightValue; // Atualiza o estado local com o último peso
                     closeWeightModal(); // Fecha o modal
@@ -624,7 +609,6 @@
              * Renderiza a tela de autenticação (Login/Cadastro).
              */
             function renderAuthScreen() {
-                // Remove bg-white, dark:bg-gray-900, bg-opacity-90, dark:bg-opacity-90
                 appRoot.innerHTML = `
                     <div class="relative z-10 rounded-2xl shadow-2xl p-6 md:p-8 my-8 w-full max-w-sm mx-auto text-center flex flex-col items-center">
                         <h2 id="auth-title" class="text-3xl md:text-4xl font-extrabold mb-8 text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-yellow-500 drop-shadow-lg">
@@ -929,14 +913,14 @@
 
             /**
              * Função principal de renderização que decide qual tela exibir (autenticação ou app principal).
-             * Também verifica o status de carregamento do SDK do Back4App.
+             * Também verifica o status de carregamento do SDK do Firebase.
              */
             function renderApp() {
-                // Se o SDK do Parse ainda não estiver carregado ou as classes não estiverem definidas, mostra tela de carregamento
-                if (typeof window.Parse === 'undefined' || !WorkoutParseClass) {
+                // Se o Firebase ainda não estiver inicializado, mostra tela de carregamento
+                if (!firebase || !auth || !db) {
                     appRoot.innerHTML = `
                         <div class="flex justify-center items-center h-full min-h-[300px] text-xl text-gray-700 dark:text-gray-300">
-                            Carregando Back4App SDK...
+                            Carregando Firebase SDK...
                         </div>
                     `;
                     return;
@@ -953,34 +937,18 @@
 
             // --- Inicialização da Aplicação quando o DOM estiver pronto ---
             window.onload = function() {
-                // Tenta inicializar o Parse SDK. Ele já deve estar disponível se o CDN foi carregado.
-                if (typeof window.Parse !== 'undefined') {
-                    console.log("Parse SDK já disponível. Inicializando...");
-                    window.Parse.initialize(BACK4APP_APP_ID, BACK4APP_JAVASCRIPT_KEY);
-                    window.Parse.serverURL = 'https://parseapi.back4app.com/';
-
-                    // Define as classes Parse uma vez que o SDK esteja inicializado
-                    WorkoutParseClass = window.Parse.Object.extend("Workout");
-                    DietParseClass = window.Parse.Object.extend("Diet");
-                    WeightParseClass = window.Parse.Object.extend("Weight");
-
-                    // Tenta verificar o usuário atual após a inicialização do Parse
-                    window.Parse.User.currentAsync().then(user => {
-                        currentUser = user; // Define o usuário atual
-                        if (currentUser) {
-                            loadUserData(currentUser); // Carrega os dados se o usuário estiver logado
-                        }
-                        renderApp(); // Renderiza a aplicação (tela de login ou principal)
-                    }).catch(error => {
-                        console.error("Erro ao verificar usuário atual no início:", error);
-                        currentUser = null; // Garante que o usuário é nulo em caso de erro
-                        renderApp(); // Renderiza a tela de login
-                    });
-                } else {
-                    console.error("Parse SDK não encontrado. Verifique o CDN ou a conexão.");
-                    // renderApp() será chamada, e a mensagem de carregamento/erro será exibida
-                    renderApp();
-                }
+                // Listener para o estado de autenticação do Firebase
+                auth.onAuthStateChanged(async (user) => {
+                    if (user) {
+                        currentUser = user;
+                        userId = user.uid;
+                        await loadUserData(user); // Carrega os dados se o usuário estiver logado
+                    } else {
+                        currentUser = null;
+                        userId = null;
+                    }
+                    renderApp(); // Renderiza a aplicação (tela de login ou principal)
+                });
             };
         })();
     </script>
