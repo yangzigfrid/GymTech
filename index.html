@@ -528,7 +528,7 @@
                 }
 
                 // Constrói a descrição concisa para exibição e salvamento
-                let descriptionToSave = `${workoutType}: ${exerciseName}`;
+                let descriptionToSave = `${exerciseName}`; // Apenas o exercício e repetições
 
                 try {
                     const workoutsCollectionRef = db.collection(`artifacts/${appId}/users/${userId}/workouts`);
@@ -785,10 +785,10 @@
                     if (dayWorkouts.length === 0) {
                         dayWorkoutsList = '<p class="text-gray-600 dark:text-gray-400 italic">Nenhum treino adicionado para este dia.</p>';
                     } else {
-                        dayWorkoutsList = '<ul class="list-disc list-inside space-y-2">';
+                        dayWorkoutsList = '<ul class="list-disc list-inside space-y-1">'; /* Ajuste aqui para diminuir o espaçamento */
                         dayWorkouts.forEach(workout => {
                             dayWorkoutsList += `
-                                <li class="text-gray-700 dark:text-gray-300 flex justify-between items-center">
+                                <li class="text-sm text-gray-700 dark:text-gray-300 flex justify-between items-center"> /* Ajuste aqui para diminuir o tamanho da fonte */
                                     <div>
                                         <span class="font-semibold">${workout.name}:</span> ${workout.description}
                                     </div>
@@ -827,9 +827,9 @@
                         </button>
                     </div>
 
-                    <div class="bg-yellow-500 text-white p-3 rounded-md mb-4 animate-fade-in text-center">
-                        <p class="font-bold mb-2">A escolha das repetições deve sempre estar alinhada com o seu objetivo principal:</p>
-                        <ul class="list-disc list-inside mx-auto max-w-fit text-left">
+                    <div class="bg-amber-800 text-white p-3 rounded-md mb-4 animate-fade-in text-center border-l-4 border-yellow-400">
+                        <p class="font-bold text-sm mb-1">A escolha das repetições deve sempre estar alinhada com o seu objetivo principal:</p>
+                        <ul class="list-disc list-inside mx-auto max-w-fit text-left text-xs">
                             <li><strong>Força (1-5 repetições):</strong> Usando cargas muito pesadas.</li>
                             <li><strong>Hipertrofia (6-12 repetições):</strong> O mais comum para ganho de massa muscular.</li>
                             <li><strong>Resistência (15+ repetições):</strong> Usando cargas leves a moderadas.</li>
