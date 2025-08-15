@@ -161,12 +161,13 @@
              */
             function renderModal(isOpen, title, contentHtml, closeCallback) {
                 const existingModal = document.getElementById('generic-modal-wrapper');
-                if (!isOpen) {
-                    if (existingModal) existingModal.remove(); // Remove o modal se não estiver mais aberto
-                    return;
+                if (existingModal) {
+                    existingModal.remove(); // Sempre remove qualquer modal existente
                 }
 
-                if (existingModal) existingModal.remove(); // Remove modal anterior para renderizar um novo (evita duplicatas)
+                if (!isOpen) {
+                    return; // Se não deve estar aberto, retorna após remover
+                }
 
                 const modalWrapper = document.createElement('div');
                 modalWrapper.id = 'generic-modal-wrapper';
@@ -361,9 +362,25 @@
 
                     // 3. Carrega Peso (a entrada mais recente)
                     const weightsCollectionRef = db.collection(`artifacts/${appId}/users/${userObj.uid}/weights`);
-                    const weightQuerySnapshot = await weightsCollectionRef.orderBy("createdAt", "desc").limit(1).get();
-                    if (!weightQuerySnapshot.empty) {
-                        weight = weightQuerySnapshot.docs[0].data().value;
+                    // IMPORTANT: Firebase orderBy() requires an index if you're querying on multiple fields or ranges.
+                    // To avoid needing to create an index manually, we will fetch all weights and sort them in memory.
+                    // For a production app with many weight entries, a proper Firestore index would be more efficient.
+                    const allWeightsSnapshot = await weightsCollectionRef.get();
+                    const allWeights = [];
+                    allWeightsSnapshot.forEach(doc => {
+                        allWeights.push({ id: doc.id, ...doc.data() });
+                    });
+
+                    // Sort weights by createdAt timestamp in descending order (most recent first)
+                    allWeights.sort((a, b) => {
+                        // Handle Firebase Timestamps
+                        const timeA = a.createdAt ? a.createdAt.toDate().getTime() : 0;
+                        const timeB = b.createdAt ? b.createdAt.toDate().getTime() : 0;
+                        return timeB - timeA;
+                    });
+
+                    if (allWeights.length > 0) {
+                        weight = allWeights[0].value;
                     } else {
                         weight = '';
                     }
@@ -773,10 +790,10 @@
                 document.getElementById('open-weight-modal-btn').onclick = openWeightModal;
 
                 // Renderiza os modais se estiverem abertos
-                if (isWorkoutModalOpen) renderWorkoutModal();
-                if (isDietModalOpen) renderDietModal();
-                if (isWeightModalOpen) renderWeightModal();
-                if (isConfirmationModalOpen) renderConfirmationModal();
+                renderWorkoutModal();
+                renderDietModal();
+                renderWeightModal();
+                renderConfirmationModal();
             }
 
             /**
