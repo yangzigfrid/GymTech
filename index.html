@@ -150,6 +150,70 @@
                 'Sexta-feira', 'Sábado', 'Domingo'
             ];
 
+            // --- Dados dos Treinos Pré-definidos ---
+            const workoutDetails = {
+                'Treino de Peito': {
+                    description: `Exercícios e Repetições:
+Supino Reto (Barra ou Halteres): 6-12 repetições. Este exercício é ideal para construir massa muscular no peitoral (hipertrofia). O uso de pesos mais pesados com menos repetições promove a força.
+Supino Inclinado (Barra ou Halteres): 6-12 repetições. Foca na parte superior do peito, que é muitas vezes menos desenvolvida.
+Supino Declinado (Barra ou Halteres): 8-15 repetições. Ativa a parte inferior do peito.
+Crucifixo com Halteres: 10-15 repetições. O movimento de abertura e fechamento alonga o músculo peitoral, promovendo flexibilidade e detalhe muscular.
+Crossover (Crossover Machine): 10-15 repetições. Ótimo para isolar o peito e dar uma sensação de "pump".
+Máquinas:
+Smith Machine: Para supino reto e inclinado. Oferece mais estabilidade, bom para iniciantes.
+Máquina de Peito (Chest Press Machine): Para supino. Permite o ajuste do peso facilmente e é mais seguro.
+Crossover Machine (Máquina de Polia): Para o exercício de crossover.
+Máquina de Crucifixo (Pec Deck): Para isolar o peito.`
+                },
+                'Treino de Costas': {
+                    description: `Exercícios e Repetições:
+Puxada na Polia (Lat Pulldown Machine): 8-12 repetições. É um dos exercícios mais eficazes para a largura das costas. A puxada com menos repetições e mais peso desenvolve a força, enquanto mais repetições com menos peso melhoram a resistência.
+Remada Curvada (Barra ou Halteres): 6-12 repetições. Constrói densidade nas costas e fortalece a lombar e os bíceps.
+Remada na Máquina (Seated Row Machine): 8-12 repetições. Ótimo para isolar as costas e melhorar a espessura.
+Hiperextensão (Hyper Extension Machine): 10-15 repetições. Fortalece a parte inferior das costas e glúteos.
+Barra Fixa (Pull-ups): Máximo de repetições possível. É um dos melhores exercícios de peso corporal para as costas.
+Máquinas:
+Máquina de Puxada Alta (Lat Pulldown Machine): Para puxadas frontais e com pegada supinada.
+Máquina de Remada (Seated Row Machine): Para remadas com pegada aberta, fechada e neutra.
+Máquina de Remada T (T-Bar Row Machine): Para remadas com peso livre.`
+                },
+                'Treino de Pernas e Glúteos': {
+                    description: `Exercícios e Repetições:
+Agachamento (Squat Rack): 6-12 repetições. O agachamento é considerado o "rei" dos exercícios. Ele trabalha a perna inteira e glúteos, sendo ideal para hipertrofia e força.
+Leg Press (Leg Press Machine): 8-15 repetições. Permite o uso de cargas pesadas com menos estresse na coluna.
+Cadeira Extensora (Leg Extension Machine): 10-20 repetições. Isola o quadríceps. Repetições mais altas são ótimas para o "pump" e resistência.
+Cadeira Flexora (Leg Curl Machine): 10-20 repetições. Isola a parte posterior da coxa (isquiotibiais).
+Panturrilha (Calf Raise Machine): 15-20 repetições. A panturrilha é um músculo resistente, e por isso precisa de mais repetições.
+Abdução e Adução (Abductor e Adductor Machine): 15-20 repetições. Trabalham os músculos da coxa interna e externa, importantes para estabilidade e contorno.
+Máquinas:
+Leg Press Machine: Para o exercício de leg press.
+Smith Machine: Para agachamento e lunges.
+Máquina de Extensão de Pernas (Leg Extension Machine): Para o exercício de cadeira extensora.
+Máquina de Flexão de Pernas (Leg Curl Machine): Para o exercício de cadeira flexora.
+Máquina de Panturrilha (Calf Raise Machine): Para o exercício de elevação de panturrilha.`
+                },
+                'Treino de Ombros': {
+                    description: `Exercícios e Repetições:
+Desenvolvimento com Halteres (Dumbbell Shoulder Press): 8-12 repetições. Exercício principal para o desenvolvimento geral do ombro.
+Elevação Lateral (Halteres ou Polia): 10-15 repetições. Essencial para a largura do ombro (deltoide medial).
+Remada Alta (Barra ou Polia): 10-15 repetições. Trabalha a parte superior do trapézio e o deltoide.
+Desenvolvimento na Máquina (Shoulder Press Machine): 8-12 repetições. Mais seguro para iniciantes e para focar no músculo.
+Máquinas:
+Smith Machine: Para o exercício de desenvolvimento (shoulder press).
+Máquina de Desenvolvimento de Ombro (Shoulder Press Machine): Para o exercício de desenvolvimento.`
+                },
+                'Treino de Braços (Bíceps e Tríceps)': {
+                    description: `Exercícios e Repetições (Bíceps):
+Rosca Direta (Barra): 8-12 repetições. Trabalha o bíceps como um todo.
+Rosca Alternada (Halteres): 10-15 repetições. Ajuda a corrigir desequilíbrios entre os braços.
+Rosca Concentrada (Halteres): 10-15 repetições. Ótimo para isolar o músculo e focar na contração.
+Exercícios e Repetições (Tríceps):
+Tríceps Testa (Barra ou Halteres): 8-12 repetições. Um dos exercícios mais eficazes para a massa do tríceps.
+Tríceps Pulley (Máquina de Polia): 10-15 repetições. Ótimo para isolamento e para dar forma ao músculo.
+Tríceps Coice (Halteres): 10-15 repetições. Foca na cabeça longa do tríceps.`
+                }
+            };
+
             // --- Funções Auxiliares para Manipulação do DOM e Lógica Geral ---
 
             /**
@@ -442,11 +506,11 @@
                 }
 
                 const form = event.target;
-                const name = form.workoutName.value;
+                const name = form.workoutName.value; // Pega o valor do select
                 const description = form.workoutDescription.value;
 
-                if (!name.trim()) { // Validação simples do nome do treino
-                    showTempMessage('O nome do treino não pode estar vazio.', 'error');
+                if (!name.trim() || name === "Selecione um treino") { // Validação do nome do treino
+                    showTempMessage('Por favor, selecione um tipo de treino.', 'error');
                     return;
                 }
 
@@ -747,6 +811,15 @@
                         </button>
                     </div>
 
+                    <div class="bg-yellow-500 text-white p-3 rounded-md mb-4 animate-fade-in text-center">
+                        <p class="font-bold mb-2">A escolha das repetições deve sempre estar alinhada com o seu objetivo principal:</p>
+                        <ul class="list-disc list-inside mx-auto max-w-fit text-left">
+                            <li><strong>Força (1-5 repetições):</strong> Usando cargas muito pesadas.</li>
+                            <li><strong>Hipertrofia (6-12 repetições):</strong> O mais comum para ganho de massa muscular.</li>
+                            <li><strong>Resistência (15+ repetições):</strong> Usando cargas leves a moderadas.</li>
+                        </ul>
+                    </div>
+
                     ${authError ? `<div class="bg-red-500 text-white p-3 rounded-md mb-4 flex justify-between items-center animate-fade-in"><span>${authError}</span><button id="clear-error-btn" class="font-bold text-lg">&times;</button></div>` : ''}
 
                     <section class="mb-12">
@@ -789,33 +862,46 @@
              */
             function renderWorkoutModal() {
                 const title = editingWorkout ? 'Editar Treino' : `Adicionar Treino para ${currentDay}`;
+                const workoutNames = Object.keys(workoutDetails);
+                let optionsHtml = '<option value="Selecione um treino">Selecione um treino</option>';
+                workoutNames.forEach(name => {
+                    const selected = (editingWorkout && editingWorkout.name === name) ? 'selected' : '';
+                    optionsHtml += `<option value="${name}" ${selected}>${name}</option>`;
+                });
+
+                // Define o valor inicial da descrição
+                let initialDescription = editingWorkout?.description || '';
+                if (!editingWorkout && workoutNames.length > 0) {
+                    // Se não estiver editando, e houver treinos pré-definidos, use a descrição do primeiro como padrão
+                    initialDescription = workoutDetails[workoutNames[0]]?.description || '';
+                }
+
                 const contentHtml = `
                     <form id="workout-form" class="space-y-6">
                         <div>
                             <label for="workoutName" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                                Nome do Treino
+                                Tipo de Treino
                             </label>
-                            <input
-                                type="text"
+                            <select
                                 id="workoutName"
                                 name="workoutName"
-                                value="${editingWorkout?.name || ''}"
                                 class="mt-1 block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:bg-gray-700 dark:text-white"
-                                placeholder="Ex: Treino de Pernas"
                                 required
-                            />
+                            >
+                                ${optionsHtml}
+                            </select>
                         </div>
                         <div>
                             <label for="workoutDescription" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                                Descrição (Opcional)
+                                Descrição (Exercícios e Repetições Sugeridas)
                             </label>
                             <textarea
                                 id="workoutDescription"
                                 name="workoutDescription"
-                                rows="4"
+                                rows="10"
                                 class="mt-1 block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:bg-gray-700 dark:text-white"
                                 placeholder="Ex: Agachamento 3x10, Leg Press 4x12..."
-                            >${editingWorkout?.description || ''}</textarea>
+                            >${initialDescription}</textarea>
                         </div>
                         <div class="flex justify-end space-x-4">
                             <button type="button" id="cancel-workout-btn" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
@@ -830,6 +916,19 @@
                 renderModal(isWorkoutModalOpen, title, contentHtml, closeWorkoutModal);
 
                 if (isWorkoutModalOpen) {
+                    // Adiciona o listener para o select para atualizar a descrição
+                    const workoutNameSelect = document.getElementById('workoutName');
+                    const workoutDescriptionTextarea = document.getElementById('workoutDescription');
+
+                    workoutNameSelect.onchange = (event) => {
+                        const selectedWorkoutType = event.target.value;
+                        if (workoutDetails[selectedWorkoutType]) {
+                            workoutDescriptionTextarea.value = workoutDetails[selectedWorkoutType].description;
+                        } else {
+                            workoutDescriptionTextarea.value = ''; // Limpa se "Selecione um treino" ou inválido
+                        }
+                    };
+
                     // Atribui os event listeners aos botões do formulário do modal de treino
                     document.getElementById('workout-form').onsubmit = handleSaveWorkout;
                     document.getElementById('cancel-workout-btn').onclick = closeWorkoutModal;
