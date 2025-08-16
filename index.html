@@ -982,7 +982,7 @@
                     // Safely get savedExerciseName, ensuring it's a string
                     const savedExerciseName = typeof editingWorkout.description === 'string' ? editingWorkout.description : '';
 
-                    if (currentWorkoutDetail) { // Check if the workout type exists in workoutDetails
+                    if (currentWorkoutDetail && Array.isArray(currentWorkoutDetail.exercises)) { // Added Array.isArray check
                         exerciseSelectDisabled = '';
                         currentWorkoutDetail.exercises.forEach(ex => {
                             const selected = (savedExerciseName === ex.name) ? 'selected' : '';
@@ -990,7 +990,7 @@
                         });
 
                         // Populate machines for editing mode
-                        if (currentWorkoutDetail.machines && currentWorkoutDetail.machines.length > 0) {
+                        if (currentWorkoutDetail.machines && Array.isArray(currentWorkoutDetail.machines) && currentWorkoutDetail.machines.length > 0) { // Added Array.isArray check
                             initialMachinesHtml = '<ul class="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">';
                             currentWorkoutDetail.machines.forEach(machine => {
                                 initialMachinesHtml += `<li><span class="font-semibold">${machine.name}:</span> ${machine.description}</li>`;
@@ -1009,7 +1009,7 @@
                             initialDescription = savedExerciseName; // Fallback if not found
                         }
                     } else {
-                        // Fallback if editingWorkout.name is not a valid workout type
+                        // Fallback if editingWorkout.name is not a valid workout type or exercises is not an array
                         exerciseSelectDisabled = 'disabled';
                         exerciseOptionsHtml = '<option value="">Selecione o Exercício</option>';
                         initialMachinesHtml = '<p class="text-gray-600 dark:text-gray-400 italic">Tipo de treino inválido ou não encontrado.</p>';
@@ -1091,14 +1091,14 @@
 
                         const currentWorkoutDetail = workoutDetails[selectedWorkoutType];
 
-                        if (currentWorkoutDetail) {
+                        if (currentWorkoutDetail && Array.isArray(currentWorkoutDetail.exercises)) {
                             currentWorkoutDetail.exercises.forEach(ex => {
                                 const selected = (initialExerciseName === ex.name) ? 'selected' : '';
                                 exerciseOptionsHtml += `<option value="${ex.name}" ${selected}>${ex.name}</option>`;
                             });
                             workoutExerciseSelect.disabled = false;
 
-                            if (currentWorkoutDetail.machines && currentWorkoutDetail.machines.length > 0) {
+                            if (currentWorkoutDetail.machines && Array.isArray(currentWorkoutDetail.machines) && currentWorkoutDetail.machines.length > 0) {
                                 machinesHtml = '<ul class="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">';
                                 currentWorkoutDetail.machines.forEach(machine => {
                                     machinesHtml += `<li><span class="font-semibold">${machine.name}:</span> ${machine.description}</li>`;
@@ -1117,20 +1117,20 @@
                     // Initial call to set up exercises and machines if editing
                     if (editingWorkout) {
                         const selectedWorkoutType = editingWorkout.name;
-                        const savedExerciseName = editingWorkout.description; // Description is now just the exercise name
+                        const savedExerciseName = typeof editingWorkout.description === 'string' ? editingWorkout.description : ''; // Ensure it's a string
                         updateExerciseAndMachines(selectedWorkoutType, savedExerciseName);
                         // Ensure description is correctly set for editing
                         const workoutTypeForEdit = editingWorkout.name;
-                        const exerciseNameForEdit = editingWorkout.description; // Description is now just the exercise name
-                        if (workoutDetails[workoutTypeForEdit] && workoutDetails[workoutTypeForEdit].exercises) {
+                        const exerciseNameForEdit = savedExerciseName; // It's already the exercise name
+                        if (workoutDetails[workoutTypeForEdit] && Array.isArray(workoutDetails[workoutTypeForEdit].exercises)) {
                             const fullExerciseDetail = workoutDetails[workoutTypeForEdit].exercises.find(ex => ex.name === exerciseNameForEdit);
                             if (fullExerciseDetail) {
                                 workoutDescriptionTextarea.value = `${fullExerciseDetail.name}: ${fullExerciseDetail.description}`;
                             } else {
-                                workoutDescriptionTextarea.value = editingWorkout.description; // Fallback if not found
+                                workoutDescriptionTextarea.value = savedExerciseName; // Fallback if not found
                             }
                         } else {
-                            workoutDescriptionTextarea.value = editingWorkout.description; // Fallback if workout type not found
+                            workoutDescriptionTextarea.value = savedExerciseName; // Fallback if workout type not found
                         }
                     } else {
                         // For adding new workout, ensure exercises and machines are reset
@@ -1148,7 +1148,7 @@
                     workoutExerciseSelect.onchange = (event) => {
                         const selectedExerciseName = event.target.value;
                         const selectedWorkoutType = workoutNameSelect.value;
-                        if (workoutDetails[selectedWorkoutType]) {
+                        if (workoutDetails[selectedWorkoutType] && Array.isArray(workoutDetails[selectedWorkoutType].exercises)) {
                             const exercise = workoutDetails[selectedWorkoutType].exercises.find(ex => ex.name === selectedExerciseName);
                             if (exercise) {
                                 workoutDescriptionTextarea.value = exercise.name + ": " + exercise.description; // Concatenate name and description
