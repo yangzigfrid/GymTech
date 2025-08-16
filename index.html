@@ -556,7 +556,8 @@
                     }
                     closeWorkoutModal();
                     console.log('Workouts after save operation:', workouts);
-                    // Força a re-renderização da tela correta para mostrar as atualizações
+                    // Recarrega os dados e renderiza a tela correta para mostrar as atualizações
+                    await loadUserData(currentUser); // Recarrega os dados para garantir consistência
                     if (currentView === 'dayDetail') {
                         renderDayDetailScreen();
                     } else {
@@ -621,6 +622,7 @@
                 renderConfirmationModal();
                 console.log('Workouts after delete operation:', workouts);
                 // Force re-render of the appropriate screen
+                await loadUserData(currentUser); // Recarrega os dados para garantir consistência
                 if (currentView === 'dayDetail') {
                     renderDayDetailScreen();
                 } else {
@@ -1250,8 +1252,8 @@
                     } else {
                         currentUser = null;
                         userId = null;
+                        renderApp(); // Renderiza a tela de login se não houver usuário
                     }
-                    renderApp();
                 });
 
                 document.body.addEventListener('click', (event) => {
