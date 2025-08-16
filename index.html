@@ -81,7 +81,10 @@
     <div id="app-root" class="relative z-10 w-full max-w-4xl rounded-2xl p-6 md:p-8 my-8 flex flex-col items-center">
         <!-- O conteúdo da aplicação será injetado aqui pelo JavaScript -->
         <div class="flex justify-center items-center h-full min-h-[300px] text-xl text-gray-700 dark:text-gray-300">
-            Carregando aplicativo...
+            Caixa de seleção para o tipo de treino e uma caixa de seleção para cada tipo de exercício atrelado ao treino, logo abaixo deve conter uma caixa mostrando as opções de máquinas e as descrições delas, mas só aparecerão as máquinas após selecionar o treino, antes de selecionar o treino deve aparecer
+Caixa suspensa de Treinos: Selecione o treino
+Caixa suspensa de Exercícios: Selecione o Exercício
+Caixa de máquinas deve ter o aviso para selecionar o tipo de treino e depois de selecionado as máquinas aparecerão
         </div>
     </div>
 
@@ -611,7 +614,6 @@
                 renderConfirmationModal();
                 console.log('Workouts after delete operation:', workouts);
                 // Force re-render of the appropriate screen
-                await loadUserData(currentUser); // Recarrega os dados para garantir consistência
                 if (currentView === 'dayDetail') {
                     renderDayDetailScreen();
                 } else {
