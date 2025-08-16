@@ -560,7 +560,7 @@
                     }
                     closeWorkoutModal(); // Fecha o modal após salvar
                     // Recarrega os dados e renderiza a tela correta para mostrar as atualizações
-                    await loadUserData(currentUser);
+                    await loadUserData(currentUser); // Recarrega os dados para garantir consistência
                     if (currentView === 'dayDetail') {
                         renderDayDetailScreen();
                     } else {
@@ -625,7 +625,7 @@
                 workoutToDelete = null; // Limpa a referência do treino a ser excluído
                 renderConfirmationModal(); // Chama diretamente a renderização do modal para fechar
                 // Recarrega os dados e renderiza a tela correta para mostrar as atualizações
-                await loadUserData(currentUser);
+                await loadUserData(currentUser); // Recarrega os dados para garantir consistência
                 if (currentView === 'dayDetail') {
                     renderDayDetailScreen();
                 } else {
