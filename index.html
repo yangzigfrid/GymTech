@@ -452,6 +452,7 @@
                     } else {
                         weight = '';
                     }
+                    renderApp(); // Chama renderApp após carregar os dados
                 } catch (error) {
                     console.error("Erro ao carregar dados do usuário:", error);
                     showTempMessage('Erro ao carregar seus dados. Tente novamente.', 'error');
@@ -545,7 +546,8 @@
                     }
                     closeWorkoutModal();
                     console.log('Workouts after save operation:', workouts);
-                    // Force re-render of the appropriate screen
+                    // Recarrega os dados e renderiza a tela correta para mostrar as atualizações
+                    await loadUserData(currentUser); // Recarrega os dados para garantir consistência
                     if (currentView === 'dayDetail') {
                         renderDayDetailScreen();
                     } else {
@@ -610,6 +612,7 @@
                 renderConfirmationModal();
                 console.log('Workouts after delete operation:', workouts);
                 // Force re-render of the appropriate screen
+                await loadUserData(currentUser); // Recarrega os dados para garantir consistência
                 if (currentView === 'dayDetail') {
                     renderDayDetailScreen();
                 } else {
