@@ -1079,7 +1079,7 @@
 
                     // Initial call to set up exercises and machines if editing
                     if (editingWorkout) {
-                        const selectedWorkoutType = editingWorkout.name;
+                        const selectedWorkoutType = typeof editingWorkout.name === 'string' ? editingWorkout.name : '';
                         const savedExerciseName = typeof editingWorkout.description === 'string' ? editingWorkout.description : '';
                         updateExerciseAndMachines(selectedWorkoutType, savedExerciseName);
                         const workoutTypeForEdit = editingWorkout.name;
