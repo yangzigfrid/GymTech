@@ -546,8 +546,7 @@
                     }
                     closeWorkoutModal();
                     console.log('Workouts after save operation:', workouts);
-                    // Recarrega os dados e renderiza a tela correta para mostrar as atualizações
-                    await loadUserData(currentUser); // Recarrega os dados para garantir consistência
+                    // Force re-render of the appropriate screen
                     if (currentView === 'dayDetail') {
                         renderDayDetailScreen();
                     } else {
@@ -862,7 +861,10 @@
              * Renderiza a tela de detalhes de um dia específico.
              */
             function renderDayDetailScreen() {
-                const dayWorkouts = workouts[currentDay] || []; // Ensure it's an array
+                const dayWorkouts = Array.isArray(workouts[currentDay])
+                    ? workouts[currentDay]
+                    : Object.values(workouts[currentDay] || {}); // Corrected line
+
                 let dayWorkoutsList = '';
                 if (dayWorkouts.length === 0) {
                     dayWorkoutsList = '<p class="text-gray-600 dark:text-gray-400 italic">Nenhum treino adicionado para este dia.</p>';
