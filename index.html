@@ -76,7 +76,7 @@
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center p-4">
+<body class="min-h-screen flex flex-col items-center justify-content-center p-4">
     <div class="bg-overlay"></div>
     <div id="app-root" class="relative z-10 w-full max-w-4xl rounded-2xl p-6 md:p-8 my-8 flex flex-col items-center">
         <!-- O conteúdo da aplicação será injetado aqui pelo JavaScript -->
@@ -976,7 +976,7 @@
                         if (currentWorkoutDetail.machines && Array.isArray(currentWorkoutDetail.machines) && currentWorkoutDetail.machines.length > 0) {
                             initialMachinesHtml = '<ul class="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">';
                             currentWorkoutDetail.machines.forEach(machine => {
-                                initialMachinesHtml += `<li><span class="font-semibold">${machine.name}:</span> ${machine.description}</li>`;
+                                machinesHtml += `<li><span class="font-semibold">${machine.name}:</span> ${machine.description}</li>`;
                             });
                             initialMachinesHtml += '</ul>';
                         } else {
