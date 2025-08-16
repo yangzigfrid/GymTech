@@ -395,8 +395,6 @@
                 }
             }
 
-            // --- Funções para Carregar Dados do Firebase Firestore ---
-
             /**
              * Carrega os dados (treinos, dieta, peso) do usuário logado do Firestore.
              * @param {object} userObj - O objeto do usuário Firebase atual.
@@ -424,6 +422,7 @@
                         }
                     });
                     workouts = loadedWorkouts;
+                    console.log('Workouts loaded:', workouts); // Debugging log
 
                     // 2. Carrega Dieta
                     const dietDocRef = db.collection(`artifacts/${appId}/users/${userObj.uid}/diet`).doc('userDietDoc');
@@ -436,18 +435,13 @@
 
                     // 3. Carrega Peso (a entrada mais recente)
                     const weightsCollectionRef = db.collection(`artifacts/${appId}/users/${userObj.uid}/weights`);
-                    // IMPORTANT: Firebase orderBy() requires an index if you're querying on multiple fields or ranges.
-                    // To avoid needing to create an index manually, we will fetch all weights and sort them in memory.
-                    // For a production app with many weight entries, a proper Firestore index would be more efficient.
                     const allWeightsSnapshot = await weightsCollectionRef.get();
                     const allWeights = [];
                     allWeightsSnapshot.forEach(doc => {
                         allWeights.push({ id: doc.id, ...doc.data() });
                     });
 
-                    // Sort weights by createdAt timestamp in descending order (most recent first)
                     allWeights.sort((a, b) => {
-                        // Handle Firebase Timestamps
                         const timeA = a.createdAt ? a.createdAt.toDate().getTime() : 0;
                         const timeB = b.createdAt ? b.createdAt.toDate().getTime() : 0;
                         return timeB - timeA;
@@ -458,26 +452,22 @@
                     } else {
                         weight = '';
                     }
-
-                    // Não chame renderApp() aqui. A renderização é controlada explicitamente após operações de dados.
                 } catch (error) {
                     console.error("Erro ao carregar dados do usuário:", error);
                     showTempMessage('Erro ao carregar seus dados. Tente novamente.', 'error');
                 }
             }
 
-            // --- Funções para manipulação de Treinos ---
-
             /**
              * Abre o modal para adicionar um novo treino para um dia específico.
              * @param {string} day - O dia da semana para o qual o treino será adicionado.
              */
             function openAddWorkoutModal(day) {
-                console.log(`Abrindo modal para adicionar treino para: ${day}`); // Depuração
-                editingWorkout = null; // Garante que não estamos em modo de edição
+                console.log(`Abrindo modal para adicionar treino para: ${day}`);
+                editingWorkout = null;
                 currentDay = day;
-                isWorkoutModalOpen = true; // Abre o modal
-                renderWorkoutModal(); // Chama diretamente a renderização do modal
+                isWorkoutModalOpen = true;
+                renderWorkoutModal();
             }
 
             /**
@@ -486,22 +476,22 @@
              * @param {object} workout - O objeto do treino a ser editado.
              */
             function openEditWorkoutModal(day, workout) {
-                console.log(`Abrindo modal para editar treino para: ${day}, Workout ID: ${workout.id}`); // Depuração
-                editingWorkout = workout; // Define o treino a ser editado
+                console.log(`Abrindo modal para editar treino para: ${day}, Workout ID: ${workout.id}`);
+                editingWorkout = workout;
                 currentDay = day;
-                isWorkoutModalOpen = true; // Abre o modal
-                renderWorkoutModal(); // Chama diretamente a renderização do modal
+                isWorkoutModalOpen = true;
+                renderWorkoutModal();
             }
 
             /**
              * Fecha o modal de adicionar/editar treino e limpa o estado relacionado.
              */
             function closeWorkoutModal() {
-                console.log('Fechando modal de treino.'); // Depuração
+                console.log('Fechando modal de treino.');
                 isWorkoutModalOpen = false;
                 editingWorkout = null;
                 currentDay = '';
-                renderWorkoutModal(); // Chama diretamente a renderização do modal para fechar
+                renderWorkoutModal();
             }
 
             /**
@@ -509,15 +499,15 @@
              * @param {Event} event - O evento de submissão do formulário.
              */
             async function handleSaveWorkout(event) {
-                event.preventDefault(); // Impede o recarregamento da página
+                event.preventDefault();
                 if (!userId) {
                     showTempMessage('Usuário não autenticado. Faça login para salvar treinos.', 'error');
                     return;
                 }
 
                 const form = event.target;
-                const workoutType = form.workoutName.value; // Pega o valor do select de tipo de treino
-                const exerciseName = form.workoutExercise.value; // Pega o valor do select de exercício
+                const workoutType = form.workoutName.value;
+                const exerciseName = form.workoutExercise.value;
 
                 if (!workoutType.trim() || workoutType === "Selecione o treino") {
                     showTempMessage('Por favor, selecione um tipo de treino.', 'error');
@@ -528,39 +518,34 @@
                     return;
                 }
 
-                // Constrói a descrição concisa para exibição e salvamento
-                let descriptionToSave = `${exerciseName}`; // Apenas o exercício e repetições
+                let descriptionToSave = `${exerciseName}`;
 
                 try {
                     const workoutsCollectionRef = db.collection(`artifacts/${appId}/users/${userId}/workouts`);
                     if (editingWorkout) {
-                        // Modo de Edição: Atualiza um treino existente
                         const workoutDocRef = workoutsCollectionRef.doc(editingWorkout.id);
                         await workoutDocRef.update({ name: workoutType, description: descriptionToSave });
 
-                        // Atualiza o estado local para refletir as mudanças na UI
                         workouts[currentDay] = workouts[currentDay].map(w =>
                             w.id === editingWorkout.id ? { ...w, name: workoutType, description: descriptionToSave } : w
                         );
                     } else {
-                        // Modo de Adição: Cria um novo treino
                         const newWorkoutDocRef = await workoutsCollectionRef.add({
                             name: workoutType,
                             description: descriptionToSave,
                             day: currentDay,
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp() // Adiciona timestamp do servidor
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
                         });
 
-                        // Adiciona o novo treino ao estado local
                         workouts[currentDay].push({
                             id: newWorkoutDocRef.id,
                             name: workoutType,
                             description: descriptionToSave,
                         });
                     }
-                    closeWorkoutModal(); // Fecha o modal após salvar
-                    // Recarrega os dados e renderiza a tela correta para mostrar as atualizações
-                    await loadUserData(currentUser); // Recarrega os dados para garantir consistência
+                    closeWorkoutModal();
+                    console.log('Workouts after save operation:', workouts);
+                    // Force re-render of the appropriate screen
                     if (currentView === 'dayDetail') {
                         renderDayDetailScreen();
                     } else {
@@ -585,17 +570,17 @@
              * @param {string} workoutId - O ID do treino a ser excluído.
              */
             function handleDeleteWorkoutClick(day, workoutId) {
-                console.log(`Preparando para excluir treino: ${day}, ID: ${workoutId}`); // Depuração
-                workoutToDelete = { day, workoutId }; // Armazena o treino para exclusão
-                isConfirmationModalOpen = true; // Abre o modal de confirmação
-                renderConfirmationModal(); // Chama diretamente a renderização do modal
+                console.log(`Preparando para excluir treino: ${day}, ID: ${workoutId}`);
+                workoutToDelete = { day, workoutId };
+                isConfirmationModalOpen = true;
+                renderConfirmationModal();
             }
 
             /**
              * Confirma e executa a exclusão de um treino no Firestore.
              */
             async function confirmDeleteWorkout() {
-                console.log('Confirmando exclusão de treino.'); // Depuração
+                console.log('Confirmando exclusão de treino.');
                 if (!userId) {
                     showTempMessage('Usuário não autenticado. Faça login para excluir treinos.', 'error');
                     return;
@@ -603,9 +588,8 @@
                 if (workoutToDelete) {
                     try {
                         const workoutDocRef = db.collection(`artifacts/${appId}/users/${userId}/workouts`).doc(workoutToDelete.workoutId);
-                        await workoutDocRef.delete(); // Exclui o treino do Firestore
+                        await workoutDocRef.delete();
 
-                        // Remove o treino do estado local
                         workouts[workoutToDelete.day] = workouts[workoutToDelete.day].filter(
                             workout => workout.id !== workoutToDelete.workoutId
                         );
@@ -621,11 +605,11 @@
                         showTempMessage(errorMessage, 'error');
                     }
                 }
-                isConfirmationModalOpen = false; // Fecha o modal de confirmação
-                workoutToDelete = null; // Limpa a referência do treino a ser excluído
-                renderConfirmationModal(); // Chama diretamente a renderização do modal para fechar
-                // Recarrega os dados e renderiza a tela correta para mostrar as atualizações
-                await loadUserData(currentUser); // Recarrega os dados para garantir consistência
+                isConfirmationModalOpen = false;
+                workoutToDelete = null;
+                renderConfirmationModal();
+                console.log('Workouts after delete operation:', workouts);
+                // Force re-render of the appropriate screen
                 if (currentView === 'dayDetail') {
                     renderDayDetailScreen();
                 } else {
@@ -637,30 +621,28 @@
              * Cancela a exclusão de um treino, fechando o modal de confirmação.
              */
             function cancelDeleteWorkout() {
-                console.log('Cancelando exclusão de treino.'); // Depuração
+                console.log('Cancelando exclusão de treino.');
                 isConfirmationModalOpen = false;
                 workoutToDelete = null;
-                renderConfirmationModal(); // Chama diretamente a renderização do modal para fechar
+                renderConfirmationModal();
             }
-
-            // --- Funções para manipulação de Dieta ---
 
             /**
              * Abre o modal de dieta.
              */
             function openDietModal() {
-                console.log('Abrindo modal de dieta.'); // Depuração
+                console.log('Abrindo modal de dieta.');
                 isDietModalOpen = true;
-                renderDietModal(); // Chama diretamente a renderização do modal
+                renderDietModal();
             }
 
             /**
              * Fecha o modal de dieta.
              */
             function closeDietModal() {
-                console.log('Fechando modal de dieta.'); // Depuração
+                console.log('Fechando modal de dieta.');
                 isDietModalOpen = false;
-                renderDietModal(); // Chama diretamente a renderização do modal para fechar
+                renderDietModal();
             }
 
             /**
@@ -677,12 +659,10 @@
 
                 try {
                     const dietDocRef = db.collection(`artifacts/${appId}/users/${userId}/diet`).doc('userDietDoc');
-                    await dietDocRef.set({ plan: dietPlan }, { merge: true }); // Usa set com merge para criar ou atualizar
+                    await dietDocRef.set({ plan: dietPlan }, { merge: true });
 
-                    diet = dietPlan; // Atualiza o estado local
-                    closeDietModal(); // Fecha o modal
-                    // Recarrega os dados e renderiza a tela principal para mostrar as atualizações
-                    await loadUserData(currentUser);
+                    diet = dietPlan;
+                    closeDietModal();
                     renderMainApp();
                 } catch (error) {
                     console.error("Erro ao salvar dieta:", error);
@@ -697,24 +677,22 @@
                 }
             }
 
-            // --- Funções para manipulação de Peso ---
-
             /**
              * Abre o modal de peso.
              */
             function openWeightModal() {
-                console.log('Abrindo modal de peso.'); // Depuração
+                console.log('Abrindo modal de peso.');
                 isWeightModalOpen = true;
-                renderWeightModal(); // Chama diretamente a renderização do modal
+                renderWeightModal();
             }
 
             /**
              * Fecha o modal de peso.
              */
             function closeWeightModal() {
-                console.log('Fechando modal de peso.'); // Depuração
+                console.log('Fechando modal de peso.');
                 isWeightModalOpen = false;
-                renderWeightModal(); // Chama diretamente a renderização do modal para fechar
+                renderWeightModal();
             }
 
             /**
@@ -729,22 +707,19 @@
                 }
                 const newWeightValue = parseFloat(event.target.newWeight.value);
 
-                if (isNaN(newWeightValue) || newWeightValue <= 0) { // Validação do peso
+                if (isNaN(newWeightValue) || newWeightValue <= 0) {
                     showTempMessage('Por favor, insira um peso válido.', 'error');
                     return;
                 }
 
                 try {
-                    // Sempre cria uma nova entrada de peso (para manter um histórico)
                     await db.collection(`artifacts/${appId}/users/${userId}/weights`).add({
                         value: newWeightValue,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp() // Adiciona timestamp do servidor
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
 
-                    weight = newWeightValue; // Atualiza o estado local com o último peso
-                    closeWeightModal(); // Fecha o modal
-                    // Recarrega os dados e renderiza a tela principal para mostrar as atualizações
-                    await loadUserData(currentUser);
+                    weight = newWeightValue;
+                    closeWeightModal();
                     renderMainApp();
                 } catch (error) {
                     console.error("Erro ao salvar peso:", error);
@@ -758,8 +733,6 @@
                     showTempMessage(errorMessage, 'error');
                 }
             }
-
-            // --- Funções de Renderização Principal (Redesenham a UI) ---
 
             /**
              * Renderiza a tela de autenticação (Login/Cadastro).
@@ -788,7 +761,6 @@
                     </div>
                 `;
 
-                // Adiciona event listeners aos elementos da tela de autenticação após eles serem criados no DOM
                 const authTitle = document.getElementById('auth-title');
                 const authSubmitBtn = document.getElementById('auth-submit-btn');
                 const toggleAuthModeBtn = document.getElementById('toggle-auth-mode-btn');
@@ -818,17 +790,14 @@
              */
             function renderMainApp() {
                 let workoutsHtml = '';
-                // Loop pelos dias da semana para gerar o HTML dos treinos
                 for (const day of daysOfWeek) {
                     workoutsHtml += `
                         <div data-day="${day}" class="day-box-clickable cursor-pointer bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-xl p-5 shadow-lg transform hover:scale-102 transition-all duration-300">
                             <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">${day}</h3>
-                            <!-- Conteúdo dos treinos removido desta tela para ser mais clean -->
                         </div>
                     `;
                 }
 
-                // Define o HTML interno do elemento raiz da aplicação
                 appRoot.innerHTML = `
                     <div class="flex justify-between items-center mb-10">
                         <h1 class="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-yellow-500 drop-shadow-lg animate-pulse-fade">
@@ -880,7 +849,6 @@
                     </div>
                 `;
 
-                // Renderiza os modais se estiverem abertos
                 renderWorkoutModal();
                 renderDietModal();
                 renderWeightModal();
@@ -891,7 +859,7 @@
              * Renderiza a tela de detalhes de um dia específico.
              */
             function renderDayDetailScreen() {
-                const dayWorkouts = workouts[currentDay];
+                const dayWorkouts = workouts[currentDay] || []; // Ensure it's an array
                 let dayWorkoutsList = '';
                 if (dayWorkouts.length === 0) {
                     dayWorkoutsList = '<p class="text-gray-600 dark:text-gray-400 italic">Nenhum treino adicionado para este dia.</p>';
@@ -951,7 +919,6 @@
                         </div>
                     </section>
                 `;
-                // Renderiza os modais se estiverem abertos
                 renderWorkoutModal();
                 renderDietModal();
                 renderWeightModal();
@@ -976,10 +943,9 @@
                 let exerciseSelectDisabled = 'disabled';
 
                 if (editingWorkout) {
-                    const selectedWorkoutType = typeof editingWorkout.name === 'string' ? editingWorkout.name : ''; // Ensure it's a string
+                    const selectedWorkoutType = typeof editingWorkout.name === 'string' ? editingWorkout.name : '';
                     const currentWorkoutDetail = workoutDetails[selectedWorkoutType];
 
-                    // Safely get savedExerciseName, ensuring it's a string
                     const savedExerciseName = typeof editingWorkout.description === 'string' ? editingWorkout.description : '';
 
                     if (currentWorkoutDetail && Array.isArray(currentWorkoutDetail.exercises)) {
@@ -1004,13 +970,13 @@
                         if (fullExerciseDetail) {
                             initialDescription = `${fullExerciseDetail.name}: ${fullExerciseDetail.description}`;
                         } else {
-                            initialDescription = savedExerciseName; // Fallback if not found
+                            initialDescription = savedExerciseName;
                         }
                     } else {
                         exerciseSelectDisabled = 'disabled';
                         exerciseOptionsHtml = '<option value="">Selecione o Exercício</option>';
                         initialMachinesHtml = '<p class="text-gray-600 dark:text-gray-400 italic">Tipo de treino inválido ou não encontrado.</p>';
-                        initialDescription = savedExerciseName; // Keep the original saved description
+                        initialDescription = savedExerciseName;
                     }
                 }
 
@@ -1114,48 +1080,43 @@
                     // Initial call to set up exercises and machines if editing
                     if (editingWorkout) {
                         const selectedWorkoutType = editingWorkout.name;
-                        const savedExerciseName = typeof editingWorkout.description === 'string' ? editingWorkout.description : ''; // Ensure it's a string
+                        const savedExerciseName = typeof editingWorkout.description === 'string' ? editingWorkout.description : '';
                         updateExerciseAndMachines(selectedWorkoutType, savedExerciseName);
-                        // Ensure description is correctly set for editing
                         const workoutTypeForEdit = editingWorkout.name;
-                        const exerciseNameForEdit = savedExerciseName; // It's already the exercise name
+                        const exerciseNameForEdit = savedExerciseName;
                         if (workoutDetails[workoutTypeForEdit] && Array.isArray(workoutDetails[workoutTypeForEdit].exercises)) {
                             const fullExerciseDetail = workoutDetails[workoutTypeForEdit].exercises.find(ex => ex.name === exerciseNameForEdit);
                             if (fullExerciseDetail) {
                                 workoutDescriptionTextarea.value = `${fullExerciseDetail.name}: ${fullExerciseDetail.description}`;
                             } else {
-                                workoutDescriptionTextarea.value = savedExerciseName; // Fallback if not found
+                                workoutDescriptionTextarea.value = savedExerciseName;
                             }
                         } else {
-                            workoutDescriptionTextarea.value = savedExerciseName; // Fallback if workout type not found
+                            workoutDescriptionTextarea.value = savedExerciseName;
                         }
                     } else {
-                        // For adding new workout, ensure exercises and machines are reset
                         updateExerciseAndMachines(workoutNameSelect.value);
                     }
 
-                    // Event listener for workout type selection
                     workoutNameSelect.onchange = (event) => {
                         const selectedWorkoutType = event.target.value;
                         updateExerciseAndMachines(selectedWorkoutType);
-                        workoutDescriptionTextarea.value = ''; // Clear description when workout type changes
+                        workoutDescriptionTextarea.value = '';
                     };
 
-                    // Event listener for exercise selection
                     workoutExerciseSelect.onchange = (event) => {
                         const selectedExerciseName = event.target.value;
                         const selectedWorkoutType = workoutNameSelect.value;
                         if (workoutDetails[selectedWorkoutType] && Array.isArray(workoutDetails[selectedWorkoutType].exercises)) {
                             const exercise = workoutDetails[selectedWorkoutType].exercises.find(ex => ex.name === selectedExerciseName);
                             if (exercise) {
-                                workoutDescriptionTextarea.value = exercise.name + ": " + exercise.description; // Concatenate name and description
+                                workoutDescriptionTextarea.value = exercise.name + ": " + exercise.description;
                             } else {
                                 workoutDescriptionTextarea.value = '';
                             }
                         }
                     };
 
-                    // Atribui os event listeners aos botões do formulário do modal de treino
                     document.getElementById('workout-form').onsubmit = handleSaveWorkout;
                     document.getElementById('cancel-workout-btn').onclick = closeWorkoutModal;
                 }
@@ -1193,7 +1154,6 @@
                 renderModal(isDietModalOpen, title, contentHtml, closeDietModal);
 
                 if (isDietModalOpen) {
-                    // Atribui os event listeners aos botões do formulário do modal de dieta
                     document.getElementById('diet-form').onsubmit = handleSaveDiet;
                     document.getElementById('cancel-diet-btn').onclick = closeDietModal;
                 }
@@ -1235,7 +1195,6 @@
                 renderModal(isWeightModalOpen, title, contentHtml, closeWeightModal);
 
                 if (isWeightModalOpen) {
-                    // Atribui os event listeners aos botões do formulário do modal de peso
                     document.getElementById('weight-form').onsubmit = handleSaveWeight;
                     document.getElementById('cancel-weight-btn').onclick = closeWeightModal;
                 }
@@ -1246,7 +1205,6 @@
              * Também verifica o status de carregamento do SDK do Firebase.
              */
             function renderApp() {
-                // Se o Firebase ainda não estiver inicializado, mostra tela de carregamento
                 if (!firebase || !auth || !db) {
                     appRoot.innerHTML = `
                         <div class="flex justify-center items-center h-full min-h-[300px] text-xl text-gray-700 dark:text-gray-300">
@@ -1256,11 +1214,9 @@
                     return;
                 }
 
-                // Se o usuário não estiver logado, renderiza a tela de autenticação
                 if (!currentUser) {
                     renderAuthScreen();
                 } else {
-                    // Se o usuário estiver logado, renderiza a tela principal da aplicação
                     if (currentView === 'main') {
                         renderMainApp();
                     } else if (currentView === 'dayDetail') {
@@ -1271,29 +1227,23 @@
 
             // --- Inicialização da Aplicação quando o DOM estiver pronto ---
             window.onload = function() {
-                // Listener para o estado de autenticação do Firebase
                 auth.onAuthStateChanged(async (user) => {
                     if (user) {
                         currentUser = user;
                         userId = user.uid;
-                        await loadUserData(user); // Carrega os dados se o usuário estiver logado
+                        await loadUserData(user);
                     } else {
                         currentUser = null;
                         userId = null;
                     }
-                    renderApp(); // Renderiza a aplicação (tela de login ou principal)
+                    renderApp();
                 });
 
-                // Adiciona o listener de delegação de eventos ao document.body UMA ÚNICA VEZ
                 document.body.addEventListener('click', (event) => {
                     const target = event.target;
-                    console.log('Clicked target:', target); // Log do elemento clicado
-
-                    // Usando closest() para encontrar o botão correspondente, mesmo se o clique for em um filho
                     const clickedElement = target.closest('.add-workout-btn, .edit-workout-btn, .delete-workout-btn, #logout-btn, #clear-error-btn, #open-diet-modal-btn, #open-weight-modal-btn, #toggle-auth-mode-btn, .day-box-clickable, #back-to-week-btn');
 
                     if (clickedElement) {
-                        console.log('Detected clicked element:', clickedElement); // Log do elemento detectado
                         if (clickedElement.matches('.add-workout-btn')) {
                             openAddWorkoutModal(clickedElement.dataset.day);
                         } else if (clickedElement.matches('.edit-workout-btn')) {
