@@ -81,10 +81,7 @@
     <div id="app-root" class="relative z-10 w-full max-w-4xl rounded-2xl p-6 md:p-8 my-8 flex flex-col items-center">
         <!-- O conteúdo da aplicação será injetado aqui pelo JavaScript -->
         <div class="flex justify-center items-center h-full min-h-[300px] text-xl text-gray-700 dark:text-gray-300">
-            Caixa de seleção para o tipo de treino e uma caixa de seleção para cada tipo de exercício atrelado ao treino, logo abaixo deve conter uma caixa mostrando as opções de máquinas e as descrições delas, mas só aparecerão as máquinas após selecionar o treino, antes de selecionar o treino deve aparecer
-Caixa suspensa de Treinos: Selecione o treino
-Caixa suspensa de Exercícios: Selecione o Exercício
-Caixa de máquinas deve ter o aviso para selecionar o tipo de treino e depois de selecionado as máquinas aparecerão
+            Carregando aplicativo...
         </div>
     </div>
 
@@ -123,13 +120,13 @@ Caixa de máquinas deve ter o aviso para selecionar o tipo de treino e depois de
             let currentUser = null; // Armazena o objeto do usuário logado do Firebase
             let userId = null; // Armazena o UID do usuário para caminhos do Firestore
             let workouts = { // Armazena os treinos organizados por dia
-                'Segunda-feira': [],
-                'Terça-feira': [],
-                'Quarta-feira': [],
-                'Quinta-feira': [],
-                'Sexta-feira': [],
-                'Sábado': [],
-                'Domingo': [],
+                'segunda-feira': [], // Padronizado para minúsculas
+                'terça-feira': [],   // Padronizado para minúsculas
+                'quarta-feira': [],  // Padronizado para minúsculas
+                'quinta-feira': [],  // Padronizado para minúsculas
+                'sexta-feira': [],   // Padronizado para minúsculas
+                'sábado': [],        // Padronizado para minúsculas
+                'domingo': [],       // Padronizado para minúsculas
             };
             let diet = ''; // Armazena o plano de dieta
             let weight = ''; // Armazena o peso atual
@@ -148,11 +145,21 @@ Caixa de máquinas deve ter o aviso para selecionar o tipo de treino e depois de
 
             // Elemento raiz onde a aplicação será renderizada
             const appRoot = document.getElementById('app-root');
-            // Nomes dos dias da semana para iteração e exibição
-            const daysOfWeek = [
+            // Nomes dos dias da semana para iteração e exibição (mantidos com a primeira letra maiúscula para exibição)
+            const daysOfWeekDisplay = [
                 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira',
                 'Sexta-feira', 'Sábado', 'Domingo'
             ];
+            // Mapeamento para obter a chave padronizada a partir do nome de exibição
+            const dayMap = {
+                'Segunda-feira': 'segunda-feira',
+                'Terça-feira': 'terça-feira',
+                'Quarta-feira': 'quarta-feira',
+                'Quinta-feira': 'quinta-feira',
+                'Sexta-feira': 'sexta-feira',
+                'Sábado': 'sábado',
+                'Domingo': 'domingo',
+            };
 
             // --- Dados dos Treinos Pré-definidos ---
             const workoutDetails = {
@@ -386,8 +393,8 @@ Caixa de máquinas deve ter o aviso para selecionar o tipo de treino e depois de
                     userId = null;
                     // Limpa o estado local de treinos, dieta e peso para a próxima sessão
                     workouts = {
-                        'Segunda-feira': [], 'Terça-feira': [], 'Quarta-feira': [], 'Quinta-feira': [],
-                        'Sexta-feira': [], 'Sábado': [], 'Domingo': [],
+                        'segunda-feira': [], 'terça-feira': [], 'quarta-feira': [], 'quinta-feira': [],
+                        'sexta-feira': [], 'sábado': [], 'domingo': [],
                     };
                     diet = '';
                     weight = '';
@@ -410,12 +417,12 @@ Caixa de máquinas deve ter o aviso para selecionar o tipo de treino e depois de
                     const workoutsCollectionRef = db.collection(`artifacts/${appId}/users/${userObj.uid}/workouts`);
                     const workoutsSnapshot = await workoutsCollectionRef.get();
                     const loadedWorkouts = {
-                        'Segunda-feira': [], 'Terça-feira': [], 'Quarta-feira': [], 'Quinta-feira': [],
-                        'Sexta-feira': [], 'Sábado': [], 'Domingo': [],
+                        'segunda-feira': [], 'terça-feira': [], 'quarta-feira': [], 'quinta-feira': [],
+                        'sexta-feira': [], 'sábado': [], 'domingo': [],
                     };
                     workoutsSnapshot.forEach(doc => {
                         const data = doc.data();
-                        const day = data.day;
+                        const day = data.day.toLowerCase(); // Padroniza para minúsculas ao carregar
                         if (loadedWorkouts[day]) {
                             loadedWorkouts[day].push({
                                 id: doc.id, // ID do documento Firestore
@@ -469,7 +476,7 @@ Caixa de máquinas deve ter o aviso para selecionar o tipo de treino e depois de
             function openAddWorkoutModal(day) {
                 console.log(`Abrindo modal para adicionar treino para: ${day}`);
                 editingWorkout = null;
-                currentDay = day;
+                currentDay = day.toLowerCase(); // Padroniza para minúsculas
                 isWorkoutModalOpen = true;
                 renderWorkoutModal();
             }
@@ -482,7 +489,7 @@ Caixa de máquinas deve ter o aviso para selecionar o tipo de treino e depois de
             function openEditWorkoutModal(day, workout) {
                 console.log(`Abrindo modal para editar treino para: ${day}, Workout ID: ${workout.id}`);
                 editingWorkout = workout;
-                currentDay = day;
+                currentDay = day.toLowerCase(); // Padroniza para minúsculas
                 isWorkoutModalOpen = true;
                 renderWorkoutModal();
             }
@@ -537,7 +544,7 @@ Caixa de máquinas deve ter o aviso para selecionar o tipo de treino e depois de
                         const newWorkoutDocRef = await workoutsCollectionRef.add({
                             name: workoutType,
                             description: descriptionToSave,
-                            day: currentDay,
+                            day: currentDay, // Salva o dia padronizado
                             createdAt: firebase.firestore.FieldValue.serverTimestamp()
                         });
 
@@ -549,7 +556,7 @@ Caixa de máquinas deve ter o aviso para selecionar o tipo de treino e depois de
                     }
                     closeWorkoutModal();
                     console.log('Workouts after save operation:', workouts);
-                    // Force re-render of the appropriate screen
+                    // Força a re-renderização da tela correta para mostrar as atualizações
                     if (currentView === 'dayDetail') {
                         renderDayDetailScreen();
                     } else {
@@ -575,7 +582,7 @@ Caixa de máquinas deve ter o aviso para selecionar o tipo de treino e depois de
              */
             function handleDeleteWorkoutClick(day, workoutId) {
                 console.log(`Preparando para excluir treino: ${day}, ID: ${workoutId}`);
-                workoutToDelete = { day, workoutId };
+                workoutToDelete = { day: day.toLowerCase(), workoutId }; // Padroniza para minúsculas
                 isConfirmationModalOpen = true;
                 renderConfirmationModal();
             }
@@ -794,10 +801,11 @@ Caixa de máquinas deve ter o aviso para selecionar o tipo de treino e depois de
              */
             function renderMainApp() {
                 let workoutsHtml = '';
-                for (const day of daysOfWeek) {
+                for (const dayDisplay of daysOfWeekDisplay) { // Usa daysOfWeekDisplay para o texto visível
+                    const dayKey = dayMap[dayDisplay]; // Obtém a chave padronizada
                     workoutsHtml += `
-                        <div data-day="${day}" class="day-box-clickable cursor-pointer bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-xl p-5 shadow-lg transform hover:scale-102 transition-all duration-300">
-                            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">${day}</h3>
+                        <div data-day="${dayDisplay}" class="day-box-clickable cursor-pointer bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-xl p-5 shadow-lg transform hover:scale-102 transition-all duration-300">
+                            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">${dayDisplay}</h3>
                         </div>
                     `;
                 }
@@ -863,9 +871,10 @@ Caixa de máquinas deve ter o aviso para selecionar o tipo de treino e depois de
              * Renderiza a tela de detalhes de um dia específico.
              */
             function renderDayDetailScreen() {
-                const dayWorkouts = Array.isArray(workouts[currentDay])
-                    ? workouts[currentDay]
-                    : Object.values(workouts[currentDay] || {}); // Corrected line
+                const dayKey = currentDay.toLowerCase(); // Padroniza currentDay para minúsculas
+                const dayWorkouts = Array.isArray(workouts[dayKey])
+                    ? workouts[dayKey]
+                    : Object.values(workouts[dayKey] || {}); // Usa a chave padronizada
 
                 let dayWorkoutsList = '';
                 if (dayWorkouts.length === 0) {
@@ -1255,7 +1264,7 @@ Caixa de máquinas deve ter o aviso para selecionar o tipo de treino e depois de
                         } else if (clickedElement.matches('.edit-workout-btn')) {
                             const day = clickedElement.dataset.day;
                             const workoutId = clickedElement.dataset.workoutId;
-                            const workout = workouts[day].find(w => w.id === workoutId);
+                            const workout = workouts[day.toLowerCase()].find(w => w.id === workoutId); // Use toLowerCase() here
                             if (workout) openEditWorkoutModal(day, workout);
                         } else if (clickedElement.matches('.delete-workout-btn')) {
                             handleDeleteWorkoutClick(clickedElement.dataset.day, clickedElement.dataset.workoutId);
