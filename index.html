@@ -433,6 +433,35 @@
                     });
                     workouts = loadedWorkouts;
                     console.log('Workouts loaded:', workouts); // Debugging log
+
+                    // 2. Carrega Dieta
+                    const dietDocRef = db.collection(`artifacts/${appId}/users/${userObj.uid}/diet`).doc('userDietDoc');
+                    const dietDoc = await dietDocRef.get();
+                    if (dietDoc.exists) {
+                        diet = dietDoc.data().plan;
+                    } else {
+                        diet = '';
+                    }
+
+                    // 3. Carrega Peso (a entrada mais recente)
+                    const weightsCollectionRef = db.collection(`artifacts/${appId}/users/${userObj.uid}/weights`);
+                    const allWeightsSnapshot = await weightsCollectionRef.get();
+                    const allWeights = [];
+                    allWeightsSnapshot.forEach(doc => {
+                        allWeights.push({ id: doc.id, ...doc.data() });
+                    });
+
+                    allWeights.sort((a, b) => {
+                        const timeA = a.createdAt ? a.createdAt.toDate().getTime() : 0;
+                        const timeB = b.createdAt ? b.createdAt.toDate().getTime() : 0;
+                        return timeB - timeA;
+                    });
+
+                    if (allWeights.length > 0) {
+                        weight = allWeights[0].value;
+                    } else {
+                        weight = '';
+                    }
                     renderApp(); // Chama renderApp após carregar os dados
                 } catch (error) {
                     console.error("Erro ao carregar dados do usuário:", error);
@@ -947,7 +976,7 @@
                         if (currentWorkoutDetail.machines && Array.isArray(currentWorkoutDetail.machines) && currentWorkoutDetail.machines.length > 0) {
                             initialMachinesHtml = '<ul class="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">';
                             currentWorkoutDetail.machines.forEach(machine => {
-                                machinesHtml += `<li><span class="font-semibold">${machine.name}:</span> ${machine.description}</li>`;
+                                initialMachinesHtml += `<li><span class="font-semibold">${machine.name}:</span> ${machine.description}</li>`;
                             });
                             initialMachinesHtml += '</ul>';
                         } else {
@@ -1247,7 +1276,7 @@
                             clearAuthError();
                         } else if (clickedElement.matches('#open-diet-modal-btn')) {
                             openDietModal();
-                        } else if (clickedElement.matches('#open-weight-modal')) {
+                        } else if (clickedElement.matches('#open-weight-modal-btn')) {
                             openWeightModal();
                         } else if (clickedElement.matches('#toggle-auth-mode-btn')) {
                             isLoginMode = !isLoginMode;
