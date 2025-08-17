@@ -461,7 +461,7 @@
                     } else {
                         weight = '';
                     }
-                    renderApp(); // Call renderApp after loading all data
+                    // No longer calling renderApp() here, it's called after loadUserData in onAuthStateChanged
                 } catch (error) {
                     console.error("Error loading user data:", error);
                     showTempMessage('Erro ao carregar seus dados. Tente novamente.', 'error');
