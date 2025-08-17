@@ -1089,7 +1089,7 @@
                         </div>
                     </form>
                 `;
-                renderModal(isDietModalOpen, title, contentHtml, closeDietModal);
+                renderModal(isDietModalOpen, title, contentHtml, closeCallback);
 
                 if (isDietModalOpen) {
                     document.getElementById('diet-form').onsubmit = handleSaveDiet;
@@ -1154,11 +1154,19 @@
 
             // --- Initial Application Setup when DOM is ready ---
             window.onload = function() {
+                // Initial render of the loading screen
+                appRoot.innerHTML = `
+                    <div class="flex justify-center items-center h-full min-h-[300px] text-xl text-gray-700 dark:text-gray-300">
+                        Carregando aplicativo...
+                    </div>
+                `;
+
                 auth.onAuthStateChanged(async (user) => {
                     if (user) {
                         currentUser = user;
                         userId = user.uid;
                         await loadUserData(user); // Load user data after successful login
+                        renderApp(); // Render the main app after data is loaded
                     } else {
                         currentUser = null;
                         userId = null;
