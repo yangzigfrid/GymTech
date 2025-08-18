@@ -600,8 +600,8 @@
                     if (selectedIndex !== "") {
                         const workout = predefinedWorkouts[selectedIndex];
                         weeklyWorkouts[day].push(workout);
-                        modal.remove();
-                        renderDayModal(day);
+                        modal.remove(); // Remove o modal antigo
+                        renderDayModal(day); // Re-renderiza o modal com o novo treino
                     } else {
                         alert("Selecione um treino para adicionar.");
                     }
