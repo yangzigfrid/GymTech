@@ -566,4 +566,576 @@
                             <strong>${w.name}</strong>: ${w.description || 'Sem descrição'}
                             <button class="text-yellow-400 ml-2 edit-btn" data-index="${i}" data-day="${day}">Editar</button>
                             <button class="text-red-400 ml-2 delete-btn" data-index="${i}" data-day="${day}">Excluir</button>
-                        </
+                        </li>
+                    `).join('');
+                }
+
+                modal.innerHTML = `
+                    <div class="bg-gray-800 p-6 rounded-xl shadow-lg w-96 relative text-white max-h-[80vh] overflow-y-auto border border-gray-700">
+                        <h2 class="text-xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">${day}</h2>
+
+                        <h3 class="font-semibold mt-2 mb-1 text-gray-300">Treinos:</h3>
+                        <ul id="workout-list" class="mb-4 list-disc list-inside text-gray-400">
+                            ${workoutListHtml}
+                        </ul>
+
+                        <select id="predefined-workout-select" class="w-full p-2 mb-2 rounded bg-gray-700 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Selecionar treino</option>
+                            ${predefinedWorkouts.map((w, i) => `<option value="${i}">${w.name}</option>`).join('')}
+                        </select>
+                        <button id="add-predefined-workout-btn" class="btn-success mb-2 w-full">Adicionar Treino Selecionado</button>
+                        <button id="close-day-modal" class="absolute top-2 right-2 text-red-400 hover:text-red-200 font-bold text-lg transition-colors duration-200">&times;</button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+
+                document.getElementById("close-day-modal").onclick = () => {
+                    modal.remove();
+                    renderApp(); // Re-renderiza a tela principal para garantir atualização
+                };
+
+                document.getElementById("add-predefined-workout-btn").addEventListener("click", () => {
+                    const select = document.getElementById("predefined-workout-select");
+                    const selectedIndex = select.value;
+                    if (selectedIndex !== "") {
+                        const workout = predefinedWorkouts[selectedIndex];
+                        weeklyWorkouts[day].push(workout);
+                        modal.remove(); // Remove o modal antigo
+                        renderDayModal(day); // Re-renderiza o modal com o novo treino
+                    } else {
+                        alert("Selecione um treino para adicionar.");
+                    }
+                });
+
+                // Editar treino
+                modal.querySelectorAll(".edit-btn").forEach(btn => {
+                    btn.addEventListener("click", () => {
+                        const index = btn.getAttribute("data-index");
+                        const currentWorkout = weeklyWorkouts[day][index];
+                        const newName = prompt("Editar nome do treino:", currentWorkout.name);
+                        if (newName) {
+                            weeklyWorkouts[day][index].name = newName;
+                            modal.remove();
+                            renderDayModal(day);
+                        }
+                    });
+                });
+
+                // Excluir treino
+                modal.querySelectorAll(".delete-btn").forEach(btn => {
+                    btn.addEventListener("click", () => {
+                        const index = btn.getAttribute("data-index");
+                        if (confirm("Deseja realmente excluir este treino?")) {
+                            weeklyWorkouts[day].splice(index, 1);
+                            modal.remove();
+                            renderDayModal(day);
+                        }
+                    });
+                });
+            }
+
+            /**
+             * Renderiza o conteúdo do modal de adicionar/editar treino.
+             */
+            function renderWorkoutModal() { // Esta função agora é renderDayModal
+                const title = editingWorkout ? 'Editar Treino' : `Adicionar Treino para ${daysOfWeekDisplay[daysOfWeekDisplay.findIndex(d => d.toLowerCase() === currentDay)]}`;
+                renderModal(isWorkoutModalOpen, title, _getWorkoutModalContentHtml(), closeWorkoutModal);
+
+                if (isWorkoutModalOpen) {
+                    const workoutNameSelect = document.getElementById('workoutName');
+                    const workoutExerciseSelect = document.getElementById('workoutExercise');
+                    const workoutDescriptionTextarea = document.getElementById('workoutDescription');
+                    const machinesBox = document.getElementById('machinesBox');
+
+                    // Função para atualizar o dropdown de exercícios e a caixa de máquinas
+                    function updateExerciseAndMachines(selectedWorkoutType, initialExerciseName = null) {
+                        let exerciseOptionsHtml = '<option value="">Selecione o Exercício</option>';
+                        let machinesHtml = '<p class="text-gray-400 italic">Selecione o tipo de treino para ver as máquinas.</p>';
+
+                        const currentWorkoutDetail = predefinedWorkouts.find(w => w.name === selectedWorkoutType);
+
+                        if (currentWorkoutDetail && Array.isArray(currentWorkoutDetail.exercises)) {
+                            exerciseSelectDisabled = '';
+                            currentWorkoutDetail.exercises.forEach(ex => {
+                                const selected = (initialExerciseName === ex.name) ? 'selected' : '';
+                                exerciseOptionsHtml += `<option value="${ex.name}" ${selected}>${ex.name}</option>`;
+                            });
+                            workoutExerciseSelect.disabled = false;
+
+                            // Máquinas do treino predefinido
+                            if (currentWorkoutDetail.machines && Array.isArray(currentWorkoutDetail.machines) && currentWorkoutDetail.machines.length > 0) {
+                                machinesHtml = '<ul class="list-disc list-inside space-y-1 text-gray-300">';
+                                currentWorkoutDetail.machines.forEach(machine => {
+                                    machinesHtml += `<li><span class="font-semibold">${machine.name}:</span> ${machine.description}</li>`;
+                                });
+                                machinesHtml += '</ul>';
+                            } else {
+                                machinesHtml = '<p class="text-gray-400 italic">Nenhuma máquina específica listada para este treino.</p>';
+                            }
+                        } else {
+                            workoutExerciseSelect.disabled = true;
+                        }
+                        workoutExerciseSelect.innerHTML = exerciseOptionsHtml;
+                        machinesBox.innerHTML = machinesHtml;
+                    }
+
+                    // Chamada inicial para configurar exercícios e máquinas se estiver editando
+                    if (editingWorkout) {
+                        const selectedWorkoutType = editingWorkout.name;
+                        const savedExerciseName = editingWorkout.description.split(':')[0].trim();
+                        updateExerciseAndMachines(selectedWorkoutType, savedExerciseName);
+                        
+                        const workoutTypeForEdit = editingWorkout.name;
+                        if (predefinedWorkouts.find(w => w.name === workoutTypeForEdit)) {
+                            workoutNameSelect.value = workoutTypeForEdit;
+                            const exerciseDetail = predefinedWorkouts.find(w => w.name === workoutTypeForEdit).exercises.find(ex => ex.name === savedExerciseName);
+                            if (exerciseDetail) {
+                                workoutDescriptionTextarea.value = `${exerciseDetail.name}: ${exerciseDetail.description}`;
+                            } else {
+                                workoutDescriptionTextarea.value = editingWorkout.description;
+                            }
+                        } else {
+                            workoutDescriptionTextarea.value = editingWorkout.description;
+                        }
+
+                    } else {
+                        updateExerciseAndMachines(workoutNameSelect.value);
+                    }
+
+                    workoutNameSelect.onchange = (event) => {
+                        const selectedWorkoutType = event.target.value;
+                        updateExerciseAndMachines(selectedWorkoutType);
+                        workoutDescriptionTextarea.value = '';
+                    };
+
+                    workoutExerciseSelect.onchange = (event) => {
+                        const selectedExerciseName = event.target.value;
+                        const selectedWorkoutType = workoutNameSelect.value;
+                        const currentWorkoutDetail = predefinedWorkouts.find(w => w.name === selectedWorkoutType);
+                        if (currentWorkoutDetail && Array.isArray(currentWorkoutDetail.exercises)) {
+                            const exercise = currentWorkoutDetail.exercises.find(ex => ex.name === selectedExerciseName);
+                            if (exercise) {
+                                workoutDescriptionTextarea.value = exercise.name + ": " + exercise.description;
+                            } else {
+                                workoutDescriptionTextarea.value = '';
+                            }
+                        }
+                    };
+
+                    document.getElementById('workout-form').onsubmit = handleSaveWorkout;
+                    document.getElementById('cancel-workout-btn').onclick = closeWorkoutModal;
+                }
+            }
+
+            /**
+             * Renderiza o conteúdo do modal de dieta.
+             */
+            function renderDietModal() {
+                const title = "Sua Dieta Completa";
+                renderModal(isDietModalOpen, title, _getDietModalContentHtml(), closeDietModal);
+
+                if (isDietModalOpen) {
+                    document.getElementById('diet-form').onsubmit = handleSaveDiet;
+                    document.getElementById('cancel-diet-btn').onclick = closeDietModal;
+                }
+            }
+
+            /**
+             * Renderiza o conteúdo do modal de peso.
+             */
+            function renderWeightModal() {
+                const title = "Registrar Seu Peso";
+                renderModal(isWeightModalOpen, title, _getWeightModalContentHtml(), closeWeightModal);
+
+                if (isWeightModalOpen) {
+                    document.getElementById('weight-form').onsubmit = handleSaveWeight;
+                    document.getElementById('cancel-weight-btn').onclick = closeWeightModal;
+                }
+            }
+
+            // --- Função Principal de Renderização ---
+            /**
+             * Renderiza a tela apropriada com base no estado de autenticação do usuário.
+             * Também anexa os event listeners necessários após a renderização do DOM.
+             */
+            function renderApp() {
+                if (!firebase || !auth || !db) {
+                    appRoot.innerHTML = `
+                        <div class="flex justify-center items-center h-full min-h-[300px] text-xl text-gray-400">
+                            Carregando Firebase SDK...
+                        </div>
+                    `;
+                    return;
+                }
+
+                if (!currentUser) {
+                    appRoot.innerHTML = _getAuthScreenHtml(isLoginMode);
+                    attachAuthListeners(); // Anexa listeners específicos da tela de autenticação
+                } else {
+                    appRoot.innerHTML = _getMainAppContentHtml();
+                    attachMainAppListeners(); // Anexa listeners específicos da tela principal
+                }
+
+                // Renderiza modais (eles se anexam ao body, não ao appRoot)
+                renderWorkoutModal();
+                renderDietModal();
+                renderWeightModal();
+                renderConfirmationModal();
+            }
+
+            // --- Funções de Lógica de Negócio e Event Handlers ---
+
+            /**
+             * Anexa os event listeners para a tela de autenticação.
+             * Chamado após a renderização da tela de autenticação.
+             */
+            function attachAuthListeners() {
+                const authForm = document.getElementById("auth-form");
+                if (authForm) {
+                    authForm.addEventListener("submit", async (e) => {
+                        e.preventDefault();
+                        const email = document.getElementById("auth-email").value;
+                        const password = document.getElementById("auth-password").value;
+
+                        try {
+                            if (isLoginMode) {
+                                await auth.signInWithEmailAndPassword(email, password);
+                            } else {
+                                await auth.createUserWithEmailAndPassword(email, password);
+                            }
+                            authError = ""; // Limpa o erro ao ter sucesso
+                        } catch (err) {
+                            authError = err.message;
+                            console.error("Erro de autenticação:", err);
+                        }
+                        renderApp(); // Re-renderiza para refletir o novo estado de autenticação ou erro
+                    });
+                }
+
+                const toggleAuthModeBtn = document.getElementById("toggle-auth-mode-btn");
+                if (toggleAuthModeBtn) {
+                    toggleAuthModeBtn.addEventListener("click", () => {
+                        isLoginMode = !isLoginMode;
+                        authError = ""; // Limpa erros ao trocar de modo
+                        renderApp(); // Re-renderiza para mostrar o novo formulário (login/cadastro)
+                    });
+                }
+
+                const clearErrorBtn = document.getElementById('clear-error-btn');
+                if (clearErrorBtn) {
+                    clearErrorBtn.onclick = () => {
+                        authError = '';
+                        renderApp();
+                    };
+                }
+            }
+
+            /**
+             * Anexa os event listeners para a tela principal do aplicativo.
+             * Chamado após a renderização da tela principal.
+             */
+            function attachMainAppListeners() {
+                const logoutBtn = document.getElementById("logout-btn");
+                if (logoutBtn) {
+                    logoutBtn.onclick = () => {
+                        handleLogout();
+                    };
+                }
+
+                // Listeners para os botões de dia da semana
+                document.querySelectorAll(".day-btn").forEach(btn => {
+                    btn.onclick = () => {
+                        const day = btn.getAttribute("data-day");
+                        renderDayModal(day); // Abre o modal do dia específico
+                    };
+                });
+            }
+
+            /**
+             * Carrega os dados (treinos, dieta, peso) do usuário logado do Firestore.
+             * @param {object} userObj - O objeto do usuário Firebase atual.
+             */
+            async function loadUserData(userObj) {
+                if (!userObj || !userObj.uid) return;
+
+                try {
+                    // 1. Carrega Treinos
+                    const workoutsCollectionRef = db.collection(`artifacts/${appId}/users/${userObj.uid}/workouts`);
+                    const workoutsSnapshot = await workoutsCollectionRef.get();
+                    const loadedWorkouts = {
+                        'segunda-feira': [], 'terça-feira': [], 'quarta-feira': [], 'quinta-feira': [],
+                        'sexta-feira': [], 'sábado': [], 'domingo': [],
+                    };
+                    workoutsSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        const day = data.day.toLowerCase();
+                        if (loadedWorkouts[day]) {
+                            loadedWorkouts[day].push({
+                                id: doc.id,
+                                name: data.name,
+                                description: data.description,
+                            });
+                        }
+                    });
+                    // Atualiza weeklyWorkouts com os dados carregados
+                    Object.assign(weeklyWorkouts, loadedWorkouts);
+                    console.log('Workouts loaded:', weeklyWorkouts);
+
+                    // 2. Carrega Dieta (simplificado, sem UI ainda)
+                    // const dietDocRef = db.collection(`artifacts/${appId}/users/${userObj.uid}/diet`).doc('userDietDoc');
+                    // const dietDoc = await dietDocRef.get();
+                    // if (dietDoc.exists) {
+                    //     diet = dietDoc.data().plan;
+                    // } else {
+                    //     diet = '';
+                    // }
+
+                    // 3. Carrega Peso (simplificado, sem UI ainda)
+                    // const weightsCollectionRef = db.collection(`artifacts/${appId}/users/${userObj.uid}/weights`);
+                    // const allWeightsSnapshot = await weightsCollectionRef.get();
+                    // const allWeights = [];
+                    // allWeightsSnapshot.forEach(doc => {
+                    //     allWeights.push({ id: doc.id, ...doc.data() });
+                    // });
+                    // allWeights.sort((a, b) => {
+                    //     const timeA = a.createdAt ? a.createdAt.toDate().getTime() : 0;
+                    //     const timeB = b.createdAt ? b.createdAt.toDate().getTime() : 0;
+                    //     return timeB - timeA;
+                    // });
+                    // if (allWeights.length > 0) {
+                    //     weight = allWeights[0].value;
+                    // } else {
+                    //     weight = '';
+                    // }
+                } catch (error) {
+                    console.error("Erro ao carregar dados do usuário:", error);
+                    authError = 'Erro ao carregar seus dados. Tente novamente.'; // Define o erro para ser exibido
+                }
+            }
+
+            /**
+             * Abre o modal para adicionar um novo treino para um dia específico.
+             * @param {string} day - O dia da semana para o qual o treino será adicionado.
+             */
+            function openAddWorkoutModal(day) {
+                console.log(`Abrindo modal para adicionar treino para: ${day}`);
+                editingWorkout = null; // Garante que não estamos em modo de edição
+                currentDay = day.toLowerCase();
+                isWorkoutModalOpen = true;
+                renderWorkoutModal(); // Reutiliza o renderWorkoutModal para o formulário de adição
+            }
+
+            /**
+             * Abre o modal para editar um treino existente.
+             * @param {string} day - O dia da semana do treino.
+             * @param {object} workout - O objeto do treino a ser editado.
+             */
+            function openEditWorkoutModal(day, workout) {
+                console.log(`Abrindo modal para editar treino para: ${day}, Workout ID: ${workout.id}`);
+                editingWorkout = workout;
+                currentDay = day.toLowerCase();
+                isWorkoutModalOpen = true;
+                renderWorkoutModal(); // Reutiliza o renderWorkoutModal para o formulário de edição
+            }
+
+            /**
+             * Lida com o salvamento (adição ou edição) de um treino no Firestore.
+             * @param {Event} event - O evento de submissão do formulário.
+             */
+            async function handleSaveWorkout(event) {
+                event.preventDefault();
+                if (!userId) {
+                    alert('Usuário não autenticado. Faça login para salvar treinos.'); // Usando alert conforme o exemplo fornecido
+                    return;
+                }
+
+                const form = event.target;
+                const workoutNameSelect = form.workoutName; // Pega o select do nome do treino
+                const selectedWorkoutIndex = workoutNameSelect.value;
+                const workoutType = predefinedWorkouts[selectedWorkoutIndex].name; // Pega o nome do treino selecionado
+
+                const exerciseNameSelect = form.workoutExercise; // Pega o select do exercício
+                const exerciseName = exerciseNameSelect.value; // Pega o nome do exercício selecionado
+
+                if (!workoutType.trim() || workoutType === "Selecionar treino") {
+                    alert('Por favor, selecione um tipo de treino.');
+                    return;
+                }
+                if (!exerciseName.trim() || exerciseName === "Selecionar Exercício") {
+                    alert('Por favor, selecione um exercício.');
+                    return;
+                }
+
+                const selectedWorkoutDetail = predefinedWorkouts.find(w => w.name === workoutType);
+                let descriptionToSave = exerciseName;
+                if (selectedWorkoutDetail && selectedWorkoutDetail.exercises) {
+                    const exerciseDetail = selectedWorkoutDetail.exercises.find(e => e.name === exerciseName);
+                    if (exerciseDetail) {
+                        descriptionToSave = `${exerciseDetail.name}: ${exerciseDetail.description}`;
+                    }
+                }
+
+                try {
+                    const workoutsCollectionRef = db.collection(`artifacts/${appId}/users/${userId}/workouts`);
+                    if (editingWorkout) {
+                        const workoutDocRef = workoutsCollectionRef.doc(editingWorkout.id);
+                        await workoutDocRef.update({ name: workoutType, description: descriptionToSave });
+
+                        weeklyWorkouts[currentDay] = weeklyWorkouts[currentDay].map(w =>
+                            w.id === editingWorkout.id ? { ...w, name: workoutType, description: descriptionToSave } : w
+                        );
+                    } else {
+                        const newWorkoutDocRef = await workoutsCollectionRef.add({
+                            name: workoutType,
+                            description: descriptionToSave,
+                            day: currentDay,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+
+                        weeklyWorkouts[currentDay].push({
+                            id: newWorkoutDocRef.id,
+                            name: workoutType,
+                            description: descriptionToSave,
+                        });
+                    }
+                    closeWorkoutModal(); // Fecha o modal
+                    console.log('Workouts after save operation:', weeklyWorkouts);
+                    renderDayModal(currentDay); // Re-renderiza o modal do dia para mostrar a atualização
+                } catch (error) {
+                    console.error("Erro ao salvar treino:", error);
+                    let errorMessage = 'Erro ao salvar treino. Tente novamente.';
+                    if (error.code) {
+                        errorMessage += ` Código: ${error.code}.`;
+                    }
+                    if (error.message) {
+                        errorMessage += ` Mensagem: ${error.message}.`;
+                    }
+                    alert(errorMessage);
+                }
+            }
+
+            /**
+             * Prepara para excluir um treino, abrindo o modal de confirmação.
+             * @param {string} day - O dia do treino a ser excluído.
+             * @param {string} workoutId - O ID do treino a ser excluído.
+             */
+            function handleDeleteWorkoutClick(day, workoutId) {
+                console.log(`Preparando para excluir treino: ${day}, ID: ${workoutId}`);
+                workoutToDelete = { day: day.toLowerCase(), workoutId };
+                isConfirmationModalOpen = true;
+                renderConfirmationModal();
+            }
+
+            /**
+             * Confirma e executa a exclusão de um treino no Firestore.
+             */
+            async function confirmDeleteWorkout() {
+                console.log('Confirmando exclusão de treino.');
+                if (!userId) {
+                    alert('Usuário não autenticado. Faça login para excluir treinos.');
+                    return;
+                }
+                if (workoutToDelete) {
+                    try {
+                        const workoutDocRef = db.collection(`artifacts/${appId}/users/${userId}/workouts`).doc(workoutToDelete.workoutId);
+                        await workoutDocRef.delete();
+
+                        weeklyWorkouts[workoutToDelete.day] = weeklyWorkouts[workoutToDelete.day].filter(
+                            workout => workout.id !== workoutToDelete.workoutId
+                        );
+                    } catch (error) {
+                        console.error("Erro ao excluir treino:", error);
+                        let errorMessage = 'Erro ao excluir treino. Tente novamente.';
+                        if (error.code) {
+                            errorMessage += ` Código: ${error.code}.`;
+                        }
+                        if (error.message) {
+                            errorMessage += ` Mensagem: ${error.message}.`;
+                        }
+                        alert(errorMessage);
+                    }
+                }
+                isConfirmationModalOpen = false;
+                workoutToDelete = null;
+                renderConfirmationModal();
+                console.log('Workouts after delete operation:', weeklyWorkouts);
+                renderDayModal(currentDay); // Re-renderiza o modal do dia para mostrar a atualização
+            }
+
+            /**
+             * Lida com o salvamento (adição ou edição) do plano de dieta no Firestore.
+             * @param {Event} event - O evento de submissão do formulário.
+             */
+            async function handleSaveDiet(event) {
+                event.preventDefault();
+                if (!userId) {
+                    alert('Usuário não autenticado. Faça login para salvar a dieta.');
+                    return;
+                }
+                const dietPlan = event.target.dietPlan.value;
+
+                try {
+                    const dietDocRef = db.collection(`artifacts/${appId}/users/${userId}/diet`).doc('userDietDoc');
+                    await dietDocRef.set({ plan: dietPlan }, { merge: true });
+
+                    diet = dietPlan;
+                    closeDietModal();
+                    renderApp();
+                } catch (error) {
+                    console.error("Erro ao salvar dieta:", error);
+                    let errorMessage = 'Erro ao salvar dieta. Tente novamente.';
+                    if (error.code) {
+                        errorMessage += ` Código: ${error.code}.`;
+                    }
+                    if (error.message) {
+                        errorMessage += ` Mensagem: ${error.message}.`;
+                    }
+                    alert(errorMessage);
+                }
+            }
+
+            /**
+             * Lida com o salvamento de um novo registro de peso no Firestore.
+             * @param {Event} event - O evento de submissão do formulário.
+             */
+            async function handleSaveWeight(event) {
+                event.preventDefault();
+                if (!userId) {
+                    alert('Usuário não autenticado. Faça login para registrar o peso.');
+                    return;
+                }
+                const newWeightValue = parseFloat(event.target.newWeight.value);
+
+                if (isNaN(newWeightValue) || newWeightValue <= 0) {
+                    alert('Por favor, insira um peso válido.');
+                    return;
+                }
+
+                try {
+                    await db.collection(`artifacts/${appId}/users/${userId}/weights`).add({
+                        value: newWeightValue,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    weight = newWeightValue;
+                    closeWeightModal();
+                    renderApp();
+                } catch (error) {
+                    console.error("Erro ao salvar peso:", error);
+                    let errorMessage = 'Erro ao salvar peso. Tente novamente.';
+                    if (error.code) {
+                        errorMessage += ` Código: ${error.code}.`;
+                    }
+                    if (error.message) {
+                        errorMessage += ` Mensagem: ${error.message}.`;
+                    }
+                    alert(errorMessage);
+                }
+            }
+
+            // Render inicial
+            renderApp();
+        })();
+    </script>
+</body>
+</html>
