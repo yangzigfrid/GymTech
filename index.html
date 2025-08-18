@@ -808,7 +808,7 @@
                             authError = err.message;
                             console.error("Erro de autenticação:", err);
                         }
-                        renderApp(); // Re-renderiza para refletir o novo estado de autenticação ou erro
+                        // Não chama renderApp() aqui. onAuthStateChanged cuidará disso.
                     });
                 }
 
