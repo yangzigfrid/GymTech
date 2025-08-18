@@ -776,11 +776,12 @@
                     attachMainAppListeners(); // Anexa listeners específicos da tela principal
                 }
 
-                // Renderiza modais (eles se anexam ao body, não ao appRoot)
-                renderWorkoutModal();
-                renderDietModal();
-                renderWeightModal();
-                renderConfirmationModal();
+                // Modais são renderizados separadamente, não parte do appRoot's innerHTML
+                // Eles só serão abertos quando o estado isXModalOpen for true
+                if (isWorkoutModalOpen) renderWorkoutModal();
+                if (isDietModalOpen) renderDietModal();
+                if (isWeightModalOpen) renderWeightModal();
+                if (isConfirmationModalOpen) renderConfirmationModal();
             }
 
             // --- Funções de Lógica de Negócio e Event Handlers ---
@@ -945,7 +946,7 @@
             async function handleSaveWorkout(event) {
                 event.preventDefault();
                 if (!userId) {
-                    alert('Usuário não autenticado. Faça login para salvar treinos.'); // Usando alert conforme o exemplo fornecido
+                    showTempMessage('Usuário não autenticado. Faça login para salvar treinos.', 'error'); // Usando showTempMessage
                     return;
                 }
 
@@ -958,11 +959,11 @@
                 const exerciseName = exerciseNameSelect.value; // Pega o nome do exercício selecionado
 
                 if (!workoutType.trim() || workoutType === "Selecionar treino") {
-                    alert('Por favor, selecione um tipo de treino.');
+                    showTempMessage('Por favor, selecione um tipo de treino.', 'error'); // Usando showTempMessage
                     return;
                 }
                 if (!exerciseName.trim() || exerciseName === "Selecionar Exercício") {
-                    alert('Por favor, selecione um exercício.');
+                    showTempMessage('Por favor, selecione um exercício.', 'error'); // Usando showTempMessage
                     return;
                 }
 
@@ -1010,7 +1011,7 @@
                     if (error.message) {
                         errorMessage += ` Mensagem: ${error.message}.`;
                     }
-                    alert(errorMessage);
+                    showTempMessage(errorMessage, 'error'); // Usando showTempMessage
                 }
             }
 
@@ -1032,7 +1033,7 @@
             async function confirmDeleteWorkout() {
                 console.log('Confirmando exclusão de treino.');
                 if (!userId) {
-                    alert('Usuário não autenticado. Faça login para excluir treinos.');
+                    showTempMessage('Usuário não autenticado. Faça login para excluir treinos.', 'error'); // Usando showTempMessage
                     return;
                 }
                 if (workoutToDelete) {
@@ -1052,7 +1053,7 @@
                         if (error.message) {
                             errorMessage += ` Mensagem: ${error.message}.`;
                         }
-                        alert(errorMessage);
+                        showTempMessage(errorMessage, 'error'); // Usando showTempMessage
                     }
                 }
                 isConfirmationModalOpen = false;
@@ -1069,7 +1070,7 @@
             async function handleSaveDiet(event) {
                 event.preventDefault();
                 if (!userId) {
-                    alert('Usuário não autenticado. Faça login para salvar a dieta.');
+                    showTempMessage('Usuário não autenticado. Faça login para salvar a dieta.', 'error'); // Usando showTempMessage
                     return;
                 }
                 const dietPlan = event.target.dietPlan.value;
@@ -1090,7 +1091,7 @@
                     if (error.message) {
                         errorMessage += ` Mensagem: ${error.message}.`;
                     }
-                    alert(errorMessage);
+                    showTempMessage(errorMessage, 'error'); // Usando showTempMessage
                 }
             }
 
@@ -1101,13 +1102,13 @@
             async function handleSaveWeight(event) {
                 event.preventDefault();
                 if (!userId) {
-                    alert('Usuário não autenticado. Faça login para registrar o peso.');
+                    showTempMessage('Usuário não autenticado. Faça login para registrar o peso.', 'error'); // Usando showTempMessage
                     return;
                 }
                 const newWeightValue = parseFloat(event.target.newWeight.value);
 
                 if (isNaN(newWeightValue) || newWeightValue <= 0) {
-                    alert('Por favor, insira um peso válido.');
+                    showTempMessage('Por favor, insira um peso válido.', 'error'); // Usando showTempMessage
                     return;
                 }
 
@@ -1129,7 +1130,7 @@
                     if (error.message) {
                         errorMessage += ` Mensagem: ${error.message}.`;
                     }
-                    alert(errorMessage);
+                    showTempMessage(errorMessage, 'error'); // Usando showTempMessage
                 }
             }
 
