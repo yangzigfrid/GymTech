@@ -1,829 +1,298 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meu Diário de Treinos</title>
-    <!-- Tailwind CSS CDN para estilização rápida e responsiva -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Inter for a clean, modern look -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <style>
-        /* Base styles and fonts */
-        body {
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            background-image: url('https://i.postimg.cc/Y4rqjL3K/background-gym.jpg'); /* Gym background image */
-            background-size: cover;
-            background-position: center;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: #1a202c; /* Default text color */
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GymTech</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Estilos base e fontes */
+    body {
+        font-family: 'Inter', sans-serif;
+        margin: 0;
+        background-image: url('https://i.postimg.cc/Y4rqjL3K/background-gym.jpg'); /* Imagem de fundo da academia */
+        background-size: cover;
+        background-position: center;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #e2e8f0; /* Cor padrão do texto para tema escuro */
+    }
+    /* Overlay escuro sobre a imagem de fundo para melhorar a legibilidade do texto */
+    .bg-overlay {
+        position: absolute;
+        inset: 0;
+        background-color: black;
+        opacity: 0.7; /* Mais escuro para contraste tecnológico */
+        z-index: 0; /* Garante que fique atrás do conteúdo principal */
+    }
+    /* Animação personalizada para o título principal */
+    @keyframes pulse-fade {
+        0%, 100% {
+            opacity: 1;
+            transform: scale(1);
         }
-        .dark body { /* Style for potential dark mode (not implemented, but good practice) */
-            color: #f7fafc;
+        50% {
+            opacity: 0.9;
+            transform: scale(1.01);
         }
-        /* Dark overlay over background image for better text readability */
-        .bg-overlay {
-            position: absolute;
-            inset: 0;
-            background-color: black;
-            opacity: 0.6;
-            z-index: 0; /* Ensures it stays behind main content */
+    }
+    .animate-pulse-fade {
+        animation: pulse-fade 3s ease-in-out infinite;
+    }
+    /* Animação para modais (pop-ups) */
+    @keyframes fade-in-up {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
         }
-        /* Custom pulse-fade animation for main title */
-        @keyframes pulse-fade {
-            0%, 100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-            50% {
-                opacity: 0.8;
-                transform: scale(1.02);
-            }
+        to {
+            opacity: 1;
+            transform: translateY(0);
         }
-        .animate-pulse-fade {
-            animation: pulse-fade 3s ease-in-out infinite;
+    }
+    .animate-fade-in-up {
+        animation: fade-in-up 0.3s ease-out forwards;
+    }
+    /* Animação para mensagens temporárias (erros/sucesso) */
+    @keyframes fade-in {
+        from {
+            opacity: 0;
         }
-        /* Animation for modals (pop-ups) */
-        @keyframes fade-in-up {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        to {
+            opacity: 1;
         }
-        .animate-fade-in-up {
-            animation: fade-in-up 0.3s ease-out forwards;
-        }
-        /* Animation for temporary messages (errors/success) */
-        @keyframes fade-in {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-        .animate-fade-in {
-            animation: fade-in 0.3s ease-out forwards;
-        }
-    </style>
+    }
+    .animate-fade-in {
+        animation: fade-in 0.3s ease-out forwards;
+    }
+    /* Estilos para inputs e textareas */
+    input, select, textarea {
+        background-color: rgba(30, 41, 59, 0.7); /* bg-slate-800 com opacidade */
+        border-color: #4a5568; /* gray-600 */
+        color: #e2e8f0; /* text-gray-200 */
+    }
+    input:focus, select:focus, textarea:focus {
+        border-color: #6366f1; /* indigo-500 */
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.5); /* indigo-500 com opacidade */
+    }
+    /* Style for primary buttons (blue) */
+    .btn-primary {
+        background-color: #4f46e5; /* indigo-600 */
+        color: white;
+        box-shadow: 0 4px 14px 0 rgba(79, 70, 229, 0.39);
+    }
+    .btn-primary:hover {
+        background-color: #4338ca; /* indigo-700 */
+        transform: scale(1.05);
+    }
+    /* Style for success buttons (green) */
+    .btn-success {
+        background-color: #10b981; /* emerald-500 */
+        color: white;
+        box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.39);
+    }
+    .btn-success:hover {
+        background-color: #059669; /* emerald-600 */
+        transform: scale(1.05);
+    }
+    /* Style for danger buttons (red) */
+    .btn-danger {
+        background-color: #dc2626; /* red-600 */
+        color: white;
+        box-shadow: 0 4px 14px 0 rgba(220, 38, 38, 0.39);
+    }
+    .btn-danger:hover {
+        background-color: #b91c1c; /* red-700 */
+        transform: scale(1.05);
+    }
+    /* Style for neutral buttons (gray) */
+    .btn-neutral {
+        background-color: #6b7280; /* gray-500 */
+        color: white;
+        box-shadow: 0 4px 14px 0 rgba(107, 114, 128, 0.39);
+    }
+    .btn-neutral:hover {
+        background-color: #4b5563; /* gray-600 */
+        transform: scale(1.05);
+    }
+  </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-content-center p-4">
-    <div class="bg-overlay"></div>
-    <div id="app-root" class="relative z-10 w-full max-w-4xl rounded-2xl p-6 md:p-8 my-8 flex flex-col items-center">
-        <!-- Application content will be injected here by JavaScript -->
-        <div class="flex justify-center items-center h-full min-h-[300px] text-xl text-gray-700 dark:text-gray-300">
-            Carregando aplicativo...
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen">
+  <div id="app-root" class="p-6 w-full max-w-md"></div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+
+  <script>
+    // ----- Config Firebase -----
+    const firebaseConfig = {
+      apiKey: "AIzaSyD5Bc5ex-R-jZF3sw2zSf-OJaS1dfn1e1c",
+      authDomain: "gymtech-2f998.firebaseapp.com",
+      projectId: "gymtech-2f998",
+      storageBucket: "gymtech-2f998.appspot.com",
+      messagingSenderId: "831193221171",
+      appId: "1:831193221171:web:41394939052f7b46",
+      measurementId: "G-MHEF18CNYY"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    // ----- Estado Global -----
+    let currentUser = null;
+    let authError = "";
+    let isLoginMode = true;
+    let isWorkoutModalOpen = false;
+
+    const appRoot = document.getElementById("app-root");
+
+    // ----- Dados do Treino de Peito (Exemplo) -----
+    const chestWorkout = {
+      name: "Treino de Peito",
+      exercises: [
+        { name: "Supino Reto", description: "6-12 repetições. Hipertrofia do peitoral." },
+        { name: "Supino Inclinado", description: "6-12 repetições. Parte superior do peito." },
+        { name: "Supino Declinado", description: "8-15 repetições. Parte inferior do peito." },
+        { name: "Crucifixo com Halteres", description: "10-15 repetições. Alongamento e definição." },
+        { name: "Crossover", description: "10-15 repetições. Isola o peito." }
+      ],
+      machines: [
+        { name: "Smith Machine", description: "Para supino reto e inclinado." },
+        { name: "Chest Press Machine", description: "Para supino seguro e ajustável." },
+        { name: "Crossover Machine", description: "Para exercício de crossover." },
+        { name: "Pec Deck", description: "Para isolar o peito." }
+      ]
+    };
+
+    // ----- Função de Renderização do App -----
+    function renderApp() {
+      if (!currentUser) {
+        // Tela de login/registro
+        appRoot.innerHTML = `
+          <div class="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
+            <h2 class="text-2xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
+              ${isLoginMode ? "Login" : "Criar Conta"}
+            </h2>
+            ${authError ? `<p class="bg-red-700 p-2 mb-3 rounded text-sm border border-red-500">${authError}</p>` : ""}
+            <form id="auth-form" class="flex flex-col gap-3">
+              <input id="auth-email" type="email" placeholder="E-mail" class="p-2 rounded text-black bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+              <input id="auth-password" type="password" placeholder="Senha" class="p-2 rounded text-black bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+              <button type="submit" class="bg-blue-600 py-2 rounded hover:bg-blue-700 transition-all duration-200">
+                ${isLoginMode ? "Entrar" : "Registrar"}
+              </button>
+            </form>
+            <button id="toggle-auth-mode-btn" class="mt-4 text-blue-400 hover:underline transition-colors duration-200">
+              ${isLoginMode ? "Não tem conta? Criar agora" : "Já tem conta? Fazer login"}
+            </button>
+          </div>
+        `;
+        attachAuthListeners();
+        return;
+      }
+
+      // Tela principal do app
+      appRoot.innerHTML = `
+        <div class="bg-gray-800 p-6 rounded-xl shadow-lg text-center border border-gray-700">
+          <h2 class="text-xl mb-4 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Bem-vindo, ${currentUser.email}</h2>
+          <button id="open-workout-btn" class="bg-green-600 py-2 px-4 rounded hover:bg-green-700 transition-all duration-200 mb-4">
+            Abrir Modal de Treino
+          </button>
+          <br>
+          <button id="logout-btn" class="bg-red-600 py-2 px-4 rounded hover:bg-red-700 transition-all duration-200">Sair</button>
         </div>
-    </div>
+      `;
 
-    <!-- Firebase SDKs - Loaded before the main script -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics-compat.js"></script>
+      // Listeners da tela principal
+      document.getElementById("logout-btn").addEventListener("click", () => {
+        auth.signOut();
+      });
 
+      document.getElementById("open-workout-btn").addEventListener("click", () => {
+        if (!isWorkoutModalOpen) {
+          renderWorkoutModal(chestWorkout);
+        }
+      });
+    }
 
-    <script>
-        // Use an IIFE (Immediately Invoked Function Expression) to encapsulate all JavaScript code
-        // This helps prevent global scope pollution.
-        (function() {
-            // Firebase Configuration - Using provided information
-            const firebaseConfig = {
-                apiKey: "AIzaSyD5Bc5ex-R-jZF3sw2zSf-OJaS1dfn1e1c",
-                authDomain: "gymtech-2f998.firebaseapp.com",
-                projectId: "gymtech-2f998",
-                storageBucket: "gymtech-2f998.firebasestorage.app",
-                messagingSenderId: "831193221171",
-                appId: "1:831193221171:web:41394939016959052f7b46",
-                measurementId: "G-MHEF18CNYY"
-            };
+    // ----- Função para Modal de Treino -----
+    function renderWorkoutModal(workout) {
+      isWorkoutModalOpen = true;
 
-            // Initialize Firebase
-            const app = firebase.initializeApp(firebaseConfig);
-            const auth = firebase.auth();
-            const db = firebase.firestore();
-            const analytics = firebase.analytics(); // Initialize Analytics, if needed
+      const modal = document.createElement("div");
+      modal.id = "workout-modal";
+      modal.className = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in-up";
+      modal.innerHTML = `
+        <div class="bg-gray-800 p-6 rounded-xl shadow-lg w-96 relative text-white max-h-[80vh] overflow-y-auto border border-gray-700">
+          <h2 class="text-xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">${workout.name}</h2>
 
-            // Define a default app ID for Firestore, if not provided by the environment
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'gym-app-default';
+          <h3 class="font-semibold mt-2 mb-1 text-gray-300">Exercícios:</h3>
+          <ul class="mb-4 list-disc list-inside text-gray-400">
+            ${workout.exercises.map(e => `<li><strong>${e.name}</strong>: ${e.description}</li>`).join('')}
+          </ul>
 
-            // --- Application State Variables ---
-            let currentUser = null; // Stores the logged-in Firebase user object
-            let userId = null; // Stores the user's UID for Firestore paths
-            let workouts = { // Stores workouts organized by day
-                'segunda-feira': [], // Padronizado para minúsculas
-                'terça-feira': [],   // Padronizado para minúsculas
-                'quarta-feira': [],  // Padronizado para minúsculas
-                'quinta-feira': [],  // Padronizado para minúsculas
-                'sexta-feira': [],   // Padronizado para minúsculas
-                'sábado': [],        // Padronizado para minúsculas
-                'domingo': [],       // Standardized to lowercase
-            };
-            let diet = ''; // Armazena o plano de dieta
-            let weight = ''; // Armazena o peso atual
-            let authError = ''; // Mensagem de erro para autenticação ou outras ações
-            let editingWorkout = null; // Armazena o treino que está sendo editado (ou null)
-            let currentDay = ''; // O dia da semana atualmente selecionado para adicionar/editar treino
+          <h3 class="font-semibold mt-2 mb-1 text-gray-300">Máquinas:</h3>
+          <ul class="mb-4 list-disc list-inside text-gray-400">
+            ${workout.machines.map(m => `<li><strong>${m.name}</strong>: ${m.description}</li>`).join('')}
+          </ul>
 
-            // Variables to control modal visibility
-            let isWorkoutModalOpen = false;
-            let isDietModalOpen = false;
-            let isWeightModalOpen = false;
-            let isConfirmationModalOpen = false;
-            let isLoginMode = true; // State to toggle between Login and Register
+          <button id="close-modal-btn" class="absolute top-2 right-2 text-red-400 hover:text-red-200 font-bold text-lg transition-colors duration-200">&times;</button>
+        </div>
+      `;
+      document.body.appendChild(modal);
 
-            // Root element where the application will be rendered
-            const appRoot = document.getElementById('app-root');
-            // Day names for iteration and display (kept with first letter capitalized for display)
-            const daysOfWeekDisplay = [
-                'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira',
-                'Sexta-feira', 'Sábado', 'Domingo'
-            ];
-            // Mapping to get the standardized key from the display name
-            const dayMap = {
-                'Segunda-feira': 'segunda-feira',
-                'Terça-feira': 'terça-feira',
-                'Quarta-feira': 'quarta-feira',
-                'Quinta-feira': 'quinta-feira',
-                'Sexta-feira': 'sexta-feira',
-                'Sábado': 'sábado',
-                'Domingo': 'domingo',
-            };
+      document.getElementById("close-modal-btn").onclick = () => {
+        modal.remove();
+        isWorkoutModalOpen = false;
+      };
+    }
 
-            // --- Pre-defined Workout Data ---
-            const workoutDetails = {
-                'Treino de Peito': {
-                    exercises: [
-                        { name: 'Supino Reto (Barra ou Halteres)', description: '6-12 repetições. Este exercício é ideal para construir massa muscular no peitoral (hipertrofia). O uso de pesos mais pesados com menos repetições promove a força.' },
-                        { name: 'Supino Inclinado (Barra ou Halteres)', description: '6-12 repetições. Foca na parte superior do peito, que é muitas vezes menos desenvolvida.' },
-                        { name: 'Supino Declinado (Barra ou Halteres)', description: '8-15 repetições. Ativa a parte inferior do peito.' },
-                        { name: 'Crucifixo com Halteres', description: '10-15 repetições. O movimento de abertura e fechamento alonga o músculo peitoral, promovendo flexibilidade e detalhe muscular.' },
-                        { name: 'Crossover (Crossover Machine)', description: '10-15 repetições. Ótimo para isolar o peito e dar uma sensação de "pump".' }
-                    ],
-                    machines: [
-                        { name: 'Smith Machine', description: 'Para supino reto e inclinado. Oferece mais estabilidade, bom para iniciantes.' },
-                        { name: 'Máquina de Peito (Chest Press Machine)', description: 'Para supino. Permite o ajuste do peso facilmente e é mais seguro.' },
-                        { name: 'Crossover Machine (Máquina de Polia)', description: 'Para o exercício de crossover.' },
-                        { name: 'Máquina de Crucifixo (Pec Deck)', description: 'Para isolar o peito.' }
-                    ]
-                },
-                'Treino de Costas': {
-                    exercises: [
-                        { name: 'Puxada na Polia (Lat Pulldown Machine)', description: '8-12 repetições. É um dos exercícios mais eficazes para a largura das costas. A puxada com menos repetições e mais peso desenvolve a força, enquanto mais repetições com menos peso melhoram a resistência.' },
-                        { name: 'Remada Curvada (Barra ou Halteres)', description: '6-12 repetições. Constrói densidade nas costas e fortalece a lombar e os bíceps.' },
-                        { name: 'Remada na Máquina (Seated Row Machine)', description: '8-12 repetições. Ótimo para isolar as costas e melhorar a espessura.' },
-                        { name: 'Hiperextensão (Hyper Extension Machine)', description: '10-15 repetições. Fortalece a parte inferior das costas e glúteos.' },
-                        { name: 'Barra Fixa (Pull-ups)', description: 'Máximo de repetições possível. É um dos melhores exercícios de peso corporal para as costas.' }
-                    ],
-                    machines: [
-                        { name: 'Máquina de Puxada Alta (Lat Pulldown Machine)', description: 'Para puxadas frontais e com pegada supinada.' },
-                        { name: 'Máquina de Remada (Seated Row Machine)', description: 'Para remadas com pegada aberta, fechada e neutra.' },
-                        { name: 'Máquina de Remada T (T-Bar Row Machine)', description: 'Para remadas com peso livre.' }
-                    ]
-                },
-                'Treino de Pernas e Glúteos': {
-                    exercises: [
-                        { name: 'Agachamento (Squat Rack)', description: '6-12 repetições. O agachamento é considerado o "rei" dos exercícios. Ele trabalha a perna inteira e glúteos, sendo ideal para hipertrofia e força.' },
-                        { name: 'Leg Press (Leg Press Machine)', description: '8-15 repetições. Permite o uso de cargas pesadas com menos estresse na coluna.' },
-                        { name: 'Cadeira Extensora (Leg Extension Machine)', description: '10-20 repetições. Isola o quadríceps. Repetições mais altas são ótimas para o "pump" e resistência.' },
-                        { name: 'Cadeira Flexora (Leg Curl Machine)', description: '10-20 repetições. Isola a parte posterior da coxa (isquiotibiais).' },
-                        { name: 'Panturrilha (Calf Raise Machine)', description: '15-20 repetições. A panturrilha é um músculo resistente, e por isso precisa de mais repetições.' },
-                        { name: 'Abdução e Adução (Abductor e Adductor Machine)', description: '15-20 repetições. Trabalham os músculos da coxa interna e externa, importantes para estabilidade e contorno.' }
-                    ],
-                    machines: [
-                        { name: 'Leg Press Machine', description: 'Para o exercício de leg press.' },
-                        { name: 'Smith Machine', description: 'Para agachamento e lunges.' },
-                        { name: 'Máquina de Extensão de Pernas (Leg Extension Machine)', description: 'Para o exercício de cadeira extensora.' },
-                        { name: 'Máquina de Flexão de Pernas (Leg Curl Machine)', description: 'Para o exercício de cadeira flexora.' },
-                        { name: 'Máquina de Panturrilha (Calf Raise Machine)', description: 'Para o exercício de elevação de panturrilha.' }
-                    ]
-                },
-                'Treino de Ombros': {
-                    exercises: [
-                        { name: 'Desenvolvimento com Halteres (Dumbbell Shoulder Press)', description: '8-12 repetições. Exercício principal para o desenvolvimento geral do ombro.' },
-                        { name: 'Elevação Lateral (Halteres ou Polia)', description: '10-15 repetições. Essencial para a largura do ombro (deltoide medial).' },
-                        { name: 'Remada Alta (Barra ou Polia)', description: '10-15 repetições. Trabalha a parte superior do trapézio e o deltoide.' },
-                        { name: 'Desenvolvimento na Máquina (Shoulder Press Machine)', description: '8-12 repetições. Mais seguro para iniciantes e para focar no músculo.' }
-                    ],
-                    machines: [
-                        { name: 'Smith Machine', description: 'Para o exercício de desenvolvimento (shoulder press).' },
-                        { name: 'Máquina de Desenvolvimento de Ombro (Shoulder Press Machine)', description: 'Para o exercício de desenvolvimento.' }
-                    ]
-                },
-                'Treino de Braços (Bíceps e Tríceps)': {
-                    exercises: [
-                        { name: 'Rosca Direta (Barra)', description: '8-12 repetições. Trabalha o bíceps como um todo.' },
-                        { name: 'Rosca Alternada (Halteres)', description: '10-15 repetições. Ajuda a corrigir desequilíbrios entre os braços.' },
-                        { name: 'Rosca Concentrada (Halteres)', description: '10-15 repetições. Ótimo para isolar o músculo e focar na contração.' },
-                        { name: 'Tríceps Testa (Barra ou Halteres)', description: '8-12 repetições. Um dos exercícios mais eficazes para a massa do tríceps.' },
-                        { name: 'Tríceps Pulley (Máquina de Polia)', description: '10-15 repetições. Ótimo para isolamento e para dar forma ao músculo.' },
-                        { name: 'Tríceps Coice (Halteres)', description: '10-15 repetições. Foca na cabeça longa do tríceps.' }
-                    ],
-                    machines: [] // No specific machines listed for this workout in your prompt
-                }
-            };
+    // ----- Listeners de Login/Registro -----
+    function attachAuthListeners() {
+      const form = document.getElementById("auth-form");
+      if (form) { // Garante que o formulário existe antes de tentar anexar o listener
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const email = document.getElementById("auth-email").value;
+          const password = document.getElementById("auth-password").value;
 
-            // --- Funções de Fechamento dos Modais (Declaradas no escopo principal) ---
-            function closeWorkoutModal() {
-                isWorkoutModalOpen = false;
-                // Não chama renderWorkoutModal() aqui, pois renderApp() será chamado logo em seguida
-                // para redesenhar a tela principal com o estado atualizado.
+          try {
+            if (isLoginMode) {
+              const userCred = await auth.signInWithEmailAndPassword(email, password);
+              currentUser = userCred.user;
+            } else {
+              const userCred = await auth.createUserWithEmailAndPassword(email, password);
+              currentUser = userCred.user;
             }
+            authError = "";
+          } catch (err) {
+            authError = err.message;
+          }
+          renderApp();
+        });
+      }
 
-            function closeDietModal() {
-                isDietModalOpen = false;
-                // Não chama renderDietModal() aqui
-            }
 
-            function closeWeightModal() {
-                isWeightModalOpen = false;
-                // Não chama renderWeightModal() aqui
-            }
+      const toggleAuthModeBtn = document.getElementById("toggle-auth-mode-btn");
+      if (toggleAuthModeBtn) { // Garante que o botão existe
+        toggleAuthModeBtn.addEventListener("click", () => {
+          isLoginMode = !isLoginMode;
+          authError = "";
+          renderApp();
+        });
+      }
+    }
 
-            function closeConfirmationModal() {
-                isConfirmationModalOpen = false;
-                // Não chama renderConfirmationModal() aqui
-            }
+    // ----- Mantém login persistente -----
+    auth.onAuthStateChanged((user) => {
+      currentUser = user;
+      renderApp();
+    });
 
-            // --- HTML Content Generators (pure functions) ---
-            /**
-             * Returns the HTML for the authentication screen (Login/Register).
-             * @param {boolean} isLoginModeParam - Indicates if the current mode is login or register.
-             */
-            function _getAuthScreenHtml(isLoginModeParam) {
-                return `
-                    <div class="relative z-10 rounded-2xl shadow-2xl p-6 md:p-8 my-8 w-full max-w-sm mx-auto text-center flex flex-col items-center bg-gray-900 border border-gray-700">
-                        <h2 id="auth-title" class="text-3xl md:text-4xl font-extrabold mb-8 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 drop-shadow-lg">
-                            ${isLoginModeParam ? 'Login' : 'Criar Conta'}
-                        </h2>
-                        ${authError ? `<div class="bg-red-700 text-white p-3 rounded-md mb-4 flex justify-between items-center animate-fade-in border border-red-500"><span>${authError}</span><button id="clear-error-btn" class="font-bold text-lg">&times;</button></div>` : ''}
-                        <form id="auth-form" class="space-y-6 w-full max-w-xs">
-                            <div>
-                                <input type="email" placeholder="E-mail" id="auth-email" class="w-full px-4 py-3 rounded-lg border focus:ring-blue-500 focus:border-blue-500" required />
-                            </div>
-                            <div>
-                                <input type="password" placeholder="Senha" id="auth-password" class="w-full px-4 py-3 rounded-lg border focus:ring-blue-500 focus:border-blue-500" required />
-                            </div>
-                            <button type="submit" id="auth-submit-btn" class="w-full btn-primary font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
-                                ${isLoginModeParam ? 'Entrar' : 'Registrar'}
-                            </button>
-                        </form>
-                        <button id="toggle-auth-mode-btn" class="mt-6 text-blue-400 hover:underline transition-colors duration-300">
-                            ${isLoginModeParam ? 'Não tem uma conta? Crie uma!' : 'Já tem uma conta? Faça login!'}
-                        </button>
-                    </div>
-                `;
-            }
-
-            /**
-             * Returns the HTML for the main application interface (all days of the week).
-             */
-            function _getMainAppContentHtml() {
-                let workoutsHtml = '';
-                for (const dayDisplay of daysOfWeekDisplay) { // Use daysOfWeekDisplay for visible text
-                    const dayKey = dayMap[dayDisplay]; // Get the standardized key
-                    const dayWorkouts = workouts[dayKey] || []; // Ensure it's an array for consistency
-
-                    let dayWorkoutsList = '';
-                    if (dayWorkouts.length === 0) {
-                        dayWorkoutsList = '<p class="text-gray-400 italic text-sm">Nenhum treino adicionado.</p>';
-                    } else {
-                        dayWorkoutsList = '<ul class="list-disc list-inside space-y-1 text-gray-300">';
-                        dayWorkouts.forEach(workout => {
-                            dayWorkoutsList += `
-                                <li class="text-sm flex justify-between items-center">
-                                    <div>
-                                        <span class="font-semibold text-cyan-400">${workout.name}:</span> ${workout.description}
-                                    </div>
-                                    <div class="flex space-x-2">
-                                        <button data-day="${dayDisplay}" data-workout-id="${workout.id}" class="edit-workout-btn text-blue-400 hover:text-blue-200 focus:outline-none transition-colors duration-200" title="Editar Treino">
-                                            ✏️
-                                        </button>
-                                        <button data-day="${dayDisplay}" data-workout-id="${workout.id}" class="delete-workout-btn text-red-400 hover:text-red-200 focus:outline-none transition-colors duration-200" title="Excluir Treino">
-                                            🗑️
-                                        </button>
-                                    </div>
-                                </li>
-                            `;
-                        });
-                        dayWorkoutsList += '</ul>';
-                    }
-
-                    workoutsHtml += `
-                        <div data-day="${dayDisplay}" class="day-box-clickable cursor-pointer bg-gray-700 hover:bg-gray-600 rounded-xl p-5 shadow-lg transform hover:scale-102 transition-all duration-300 border border-gray-600">
-                            <h3 class="text-xl font-bold text-white mb-4 border-b border-gray-500 pb-2">${dayDisplay}</h3>
-                            ${dayWorkoutsList}
-                            <button data-day="${dayDisplay}" class="add-workout-btn mt-5 w-full btn-primary py-2 px-4 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
-                                Adicionar Treino
-                            </button>
-                        </div>
-                    `;
-                }
-
-                return `
-                    <div class="flex justify-between items-center w-full mb-10">
-                        <h1 class="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 drop-shadow-lg animate-pulse-fade">
-                            💪 GymTech 💪
-                        </h1>
-                        <button id="logout-btn" class="btn-danger font-bold py-2 px-4 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
-                            Sair
-                        </button>
-                    </div>
-
-                    <div class="bg-amber-900 bg-opacity-70 text-white p-3 rounded-md mb-8 animate-fade-in text-center border-l-4 border-yellow-400 shadow-md">
-                        <p class="font-bold text-sm mb-1">A escolha das repetições deve sempre estar alinhada com o seu objetivo principal:</p>
-                        <ul class="list-disc list-inside mx-auto max-w-fit text-left text-xs">
-                            <li><strong class="text-yellow-200">Força (1-5 repetições):</strong> Usando cargas muito pesadas.</li>
-                            <li><strong class="text-yellow-200">Hipertrofia (6-12 repetições):</strong> O mais comum para ganho de massa muscular.</li>
-                            <li><strong class="text-yellow-200">Resistência (15+ repetições):</strong> Usando cargas leves a moderadas.</li>
-                        </ul>
-                    </div>
-
-                    ${authError ? `<div class="bg-red-700 text-white p-3 rounded-md mb-4 flex justify-between items-center animate-fade-in border border-red-500 shadow-md"><span>${authError}</span><button id="clear-error-btn" class="font-bold text-lg">&times;</button></div>` : ''}
-
-                    <section class="mb-12 w-full">
-                        <h2 class="text-3xl font-bold mb-6 text-center text-gray-200">Seus Treinos Semanais</h2>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            ${workoutsHtml}
-                        </div>
-                    </section>
-
-                    <div class="flex flex-col md:flex-row gap-6 w-full justify-center">
-                        <section class="mb-12 bg-gradient-to-r from-emerald-700 to-green-800 rounded-2xl p-6 shadow-xl transform hover:scale-102 transition-all duration-300 flex-1 border border-emerald-600">
-                            <h2 class="text-3xl font-bold text-white text-center mb-4">Sua Dieta</h2>
-                            <div class="bg-gray-900 rounded-lg p-4 shadow-inner min-h-[100px] flex items-center justify-center border border-gray-700">
-                                ${diet ? `<p class="text-gray-300 whitespace-pre-wrap text-lg text-center">${diet}</p>` : `<p class="text-gray-500 italic text-lg text-center">Nenhuma dieta adicionada ainda.</p>`}
-                            </div>
-                            <button id="open-diet-modal-btn" class="mt-6 w-full btn-success font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105">
-                                ${diet ? 'Editar Dieta' : 'Adicionar Dieta'}
-                            </button>
-                        </section>
-
-                        <section class="mb-12 bg-gradient-to-r from-indigo-700 to-purple-800 rounded-2xl p-6 shadow-xl transform hover:scale-102 transition-all duration-300 flex-1 border border-indigo-600">
-                            <h2 class="text-3xl font-bold text-white text-center mb-4">Seu Peso</h2>
-                            <div class="bg-gray-900 rounded-lg p-4 shadow-inner min-h-[80px] flex items-center justify-center border border-gray-700">
-                                ${weight ? `<p class="text-gray-300 text-5xl font-extrabold">${weight} kg</p>` : `<p class="text-gray-500 italic text-lg text-center">Nenhum peso registrado ainda.</p>`}
-                            </div>
-                            <button id="open-weight-modal-btn" class="mt-6 w-full btn-primary font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105">
-                                ${weight ? 'Atualizar Peso' : 'Registrar Peso'}
-                            </button>
-                        </section>
-                    </div>
-                `;
-            }
-
-            /**
-             * Returns the HTML content for the workout modal form.
-             */
-            function _getWorkoutModalContentHtml() {
-                const workoutNames = Object.keys(workoutDetails);
-                let workoutOptionsHtml = '<option value="">Selecione o treino</option>';
-                workoutNames.forEach(name => {
-                    const selected = (editingWorkout && editingWorkout.name === name) ? 'selected' : '';
-                    workoutOptionsHtml += `<option value="${name}" ${selected}>${name}</option>`;
-                });
-
-                let exerciseOptionsHtml = '<option value="">Selecione o Exercício</option>';
-                let initialDescription = '';
-                let initialMachinesHtml = '<p class="text-gray-400 italic">Selecione o tipo de treino para ver as máquinas.</p>';
-                let exerciseSelectDisabled = 'disabled';
-
-                if (editingWorkout) {
-                    const selectedWorkoutType = typeof editingWorkout.name === 'string' ? editingWorkout.name : '';
-                    const currentWorkoutDetail = workoutDetails[selectedWorkoutType];
-
-                    const savedExerciseName = typeof editingWorkout.description === 'string' ? editingWorkout.description : '';
-
-                    if (currentWorkoutDetail && Array.isArray(currentWorkoutDetail.exercises)) {
-                        exerciseSelectDisabled = '';
-                        currentWorkoutDetail.exercises.forEach(ex => {
-                            const selected = (savedExerciseName === ex.name) ? 'selected' : '';
-                            exerciseOptionsHtml += `<option value="${ex.name}" ${selected}>${ex.name}</option>`;
-                        });
-
-                        if (currentWorkoutDetail.machines && Array.isArray(currentWorkoutDetail.machines) && currentWorkoutDetail.machines.length > 0) {
-                            initialMachinesHtml = '<ul class="list-disc list-inside space-y-1 text-gray-300">';
-                            currentWorkoutDetail.machines.forEach(machine => {
-                                machinesHtml += `<li><span class="font-semibold">${machine.name}:</span> ${machine.description}</li>`;
-                            });
-                            initialMachinesHtml += '</ul>';
-                        } else {
-                            initialMachinesHtml = '<p class="text-gray-400 italic">Nenhuma máquina específica listada para este treino.</p>';
-                        }
-
-                        const exerciseNameForEdit = savedExerciseName;
-                        const fullExerciseDetail = currentWorkoutDetail.exercises.find(ex => ex.name === exerciseNameForEdit);
-                        if (fullExerciseDetail) {
-                            initialDescription = `${fullExerciseDetail.name}: ${fullExerciseDetail.description}`;
-                        } else {
-                            initialDescription = savedExerciseName;
-                        }
-                    } else {
-                        exerciseSelectDisabled = 'disabled';
-                        exerciseOptionsHtml = '<option value="">Selecione o Exercício</option>';
-                        initialMachinesHtml = '<p class="text-gray-400 italic">Tipo de treino inválido ou não encontrado.</p>';
-                        initialDescription = savedExerciseName;
-                    }
-                }
-
-                return `
-                    <form id="workout-form" class="space-y-6">
-                        <div>
-                            <label for="workoutName" class="block text-sm font-medium text-gray-200 mb-2">
-                                Tipo de Treino
-                            </label>
-                            <select
-                                id="workoutName"
-                                name="workoutName"
-                                class="mt-1 block w-full px-4 py-3 rounded-lg border focus:ring-blue-500 focus:border-blue-500"
-                                required
-                            >
-                                ${workoutOptionsHtml}
-                            </select>
-                        </div>
-                        <div>
-                            <label for="workoutExercise" class="block text-sm font-medium text-gray-200 mb-2">
-                                Exercício
-                            </label>
-                            <select
-                                id="workoutExercise"
-                                name="workoutExercise"
-                                class="mt-1 block w-full px-4 py-3 rounded-lg border focus:ring-blue-500 focus:border-blue-500"
-                                ${exerciseSelectDisabled}
-                            >
-                                ${exerciseOptionsHtml}
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-200 mb-2">
-                                Máquinas
-                            </label>
-                            <div id="machinesBox" class="mt-1 block w-full px-4 py-3 rounded-md border bg-gray-700 text-gray-200 min-h-[80px] overflow-auto">
-                                ${initialMachinesHtml}
-                            </div>
-                        </div>
-                        <div>
-                            <label for="workoutDescription" class="block text-sm font-medium text-gray-200 mb-2">
-                                Descrição (Exercícios e Repetições Sugeridas)
-                            </label>
-                            <textarea
-                                id="workoutDescription"
-                                name="workoutDescription"
-                                rows="10"
-                                class="mt-1 block w-full px-4 py-3 rounded-lg border focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="Ex: Agachamento 3x10, Leg Press 4x12..."
-                            >${initialDescription}</textarea>
-                        </div>
-                        <div class="flex justify-end space-x-4">
-                            <button type="button" id="cancel-workout-btn" class="btn-neutral font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
-                                Cancelar
-                            </button>
-                            <button type="submit" id="save-workout-btn" class="btn-primary font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
-                                ${editingWorkout ? 'Salvar Alterações' : 'Adicionar Treino'}
-                            </button>
-                        </div>
-                    </form>
-                `;
-            }
-
-            /**
-             * Returns the HTML content for the diet modal form.
-             */
-            function _getDietModalContentHtml() {
-                return `
-                    <form id="diet-form" class="space-y-6">
-                        <div>
-                            <label for="dietPlan" class="block text-sm font-medium text-gray-200 mb-2">
-                                Plano de Dieta
-                            </label>
-                            <textarea
-                                id="dietPlan"
-                                name="dietPlan"
-                                rows="10"
-                                class="mt-1 block w-full px-4 py-3 rounded-lg border focus:ring-green-500 focus:border-green-500"
-                                placeholder="Descreva sua dieta para a semana, refeição por refeição."
-                            >${diet}</textarea>
-                        </div>
-                        <div class="flex justify-end space-x-4">
-                            <button type="button" id="cancel-diet-btn" class="btn-neutral font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
-                                Cancelar
-                            </button>
-                            <button type="submit" id="save-diet-btn" class="btn-success font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
-                                Salvar Dieta
-                            </button>
-                        </div>
-                    </form>
-                `;
-            }
-
-            /**
-             * Returns the HTML content for the weight modal form.
-             */
-            function _getWeightModalContentHtml() {
-                return `
-                    <form id="weight-form" class="space-y-6">
-                        <div>
-                            <label for="newWeight" class="block text-sm font-medium text-gray-200 mb-2">
-                                Peso (kg)
-                            </label>
-                            <input
-                                type="number"
-                                id="newWeight"
-                                name="newWeight"
-                                step="0.1"
-                                min="0"
-                                value="${weight}"
-                                class="mt-1 block w-full px-4 py-3 rounded-lg border focus:ring-purple-500 focus:border-purple-500"
-                                placeholder="Ex: 75.5"
-                                required
-                            />
-                        </div>
-                        <div class="flex justify-end space-x-4">
-                            <button type="button" id="cancel-weight-btn" class="btn-neutral font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
-                                Cancelar
-                            </button>
-                            <button type="submit" id="save-weight-btn" class="btn-primary font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
-                                Salvar Peso
-                            </button>
-                        </div>
-                    </form>
-                `;
-            }
-
-            // --- Modal Render Functions ---
-            /**
-             * Renders a generic modal on the screen.
-             * @param {boolean} isOpen - Whether the modal should be visible.
-             * @param {string} title - Title of the modal.
-             * @param {string} contentHtml - HTML content to be inserted into the modal body.
-             * @param {Function} closeCallback - Function to be called when closing the modal.
-             */
-            function renderModal(isOpen, title, contentHtml, closeCallback) {
-                const existingModal = document.getElementById('generic-modal-wrapper');
-                if (existingModal) {
-                    existingModal.remove(); // Always remove any existing modal
-                }
-
-                if (!isOpen) {
-                    return; // If it shouldn't be open, return after removing
-                }
-
-                const modalWrapper = document.createElement('div');
-                modalWrapper.id = 'generic-modal-wrapper';
-                modalWrapper.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50';
-
-                const modalContent = document.createElement('div');
-                modalContent.className = 'bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg relative animate-fade-in-up border border-gray-700';
-
-                const modalTitle = document.createElement('h2');
-                modalTitle.className = 'text-2xl font-bold mb-4 text-white border-b border-gray-600 pb-2';
-                modalTitle.textContent = title;
-
-                const closeButton = document.createElement('button');
-                closeButton.className = 'absolute top-3 right-3 text-gray-400 hover:text-white text-3xl font-bold';
-                closeButton.innerHTML = '&times;'; // Close icon
-                closeButton.onclick = closeCallback; // Assign the close function
-
-                const contentContainer = document.createElement('div');
-                contentContainer.innerHTML = contentHtml; // Insert the provided HTML content
-
-                modalContent.appendChild(modalTitle);
-                modalContent.appendChild(closeButton);
-                modalContent.appendChild(contentContainer);
-                modalWrapper.appendChild(modalContent);
-
-                document.body.appendChild(modalWrapper); // Add the modal to the document body
-            }
-
-            /**
-             * Renders the confirmation modal for workout deletion.
-             */
-            function renderConfirmationModal() {
-                const message = "Tem certeza que deseja excluir este treino?";
-                const contentHtml = `
-                    <p class="text-gray-300 mb-6 text-center">${message}</p>
-                    <div class="flex justify-around space-x-4">
-                        <button id="confirm-delete-btn" class="btn-danger font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105">
-                            Confirmar
-                        </button>
-                        <button id="cancel-delete-btn" class="btn-neutral font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105">
-                            Cancelar
-                        </button>
-                    </div>
-                `;
-                renderModal(isConfirmationModalOpen, "Confirmação", contentHtml, closeConfirmationModal); // Use closeConfirmationModal
-
-                if (isConfirmationModalOpen) {
-                    // Assign event listeners to the confirmation modal buttons
-                    document.getElementById('confirm-delete-btn').onclick = confirmDeleteWorkout;
-                    document.getElementById('cancel-delete-btn').onclick = closeConfirmationModal; // Use closeConfirmationModal
-                }
-            }
-
-            /**
-             * Renders the content of the add/edit workout modal.
-             */
-            function renderWorkoutModal() {
-                const title = editingWorkout ? 'Editar Treino' : `Adicionar Treino para ${daysOfWeekDisplay[daysOfWeekDisplay.findIndex(d => d.toLowerCase() === currentDay)]}`;
-                renderModal(isWorkoutModalOpen, title, _getWorkoutModalContentHtml(), closeWorkoutModal);
-
-                if (isWorkoutModalOpen) {
-                    const workoutNameSelect = document.getElementById('workoutName');
-                    const workoutExerciseSelect = document.getElementById('workoutExercise');
-                    const workoutDescriptionTextarea = document.getElementById('workoutDescription');
-                    const machinesBox = document.getElementById('machinesBox');
-
-                    // Function to update exercise dropdown and machines box
-                    function updateExerciseAndMachines(selectedWorkoutType, initialExerciseName = null) {
-                        let exerciseOptionsHtml = '<option value="">Selecione o Exercício</option>';
-                        let machinesHtml = '<p class="text-gray-400 italic">Selecione o tipo de treino para ver as máquinas.</p>';
-
-                        const currentWorkoutDetail = workoutDetails[selectedWorkoutType];
-
-                        if (currentWorkoutDetail && Array.isArray(currentWorkoutDetail.exercises)) {
-                            exerciseSelectDisabled = '';
-                            currentWorkoutDetail.exercises.forEach(ex => {
-                                const selected = (initialExerciseName === ex.name) ? 'selected' : '';
-                                exerciseOptionsHtml += `<option value="${ex.name}" ${selected}>${ex.name}</option>`;
-                            });
-                            workoutExerciseSelect.disabled = false;
-
-                            if (currentWorkoutDetail.machines && Array.isArray(currentWorkoutDetail.machines) && currentWorkoutDetail.machines.length > 0) {
-                                machinesHtml = '<ul class="list-disc list-inside space-y-1 text-gray-300">';
-                                currentWorkoutDetail.machines.forEach(machine => {
-                                    machinesHtml += `<li><span class="font-semibold">${machine.name}:</span> ${machine.description}</li>`;
-                                });
-                                machinesHtml += '</ul>';
-                            } else {
-                                machinesHtml = '<p class="text-gray-400 italic">Nenhuma máquina específica listada para este treino.</p>';
-                            }
-                        } else {
-                            workoutExerciseSelect.disabled = true;
-                        }
-                        workoutExerciseSelect.innerHTML = exerciseOptionsHtml;
-                        machinesBox.innerHTML = machinesHtml;
-                    }
-
-                    // Initial call to set up exercises and machines if editing
-                    if (editingWorkout) {
-                        const selectedWorkoutType = typeof editingWorkout.name === 'string' ? editingWorkout.name : '';
-                        const savedExerciseName = typeof editingWorkout.description === 'string' ? editingWorkout.description : '';
-                        updateExerciseAndMachines(selectedWorkoutType, savedExerciseName);
-                        const workoutTypeForEdit = editingWorkout.name;
-                        const exerciseNameForEdit = savedExerciseName;
-                        if (workoutDetails[workoutTypeForEdit] && Array.isArray(workoutDetails[workoutTypeForEdit].exercises)) {
-                            const fullExerciseDetail = workoutDetails[workoutTypeForEdit].exercises.find(ex => ex.name === exerciseNameForEdit);
-                            if (fullExerciseDetail) {
-                                workoutDescriptionTextarea.value = `${fullExerciseDetail.name}: ${fullExerciseDetail.description}`;
-                            } else {
-                                workoutDescriptionTextarea.value = savedExerciseName;
-                            }
-                        } else {
-                            workoutDescriptionTextarea.value = savedExerciseName;
-                        }
-                    } else {
-                        updateExerciseAndMachines(workoutNameSelect.value);
-                    }
-
-                    workoutNameSelect.onchange = (event) => {
-                        const selectedWorkoutType = event.target.value;
-                        updateExerciseAndMachines(selectedWorkoutType);
-                        workoutDescriptionTextarea.value = '';
-                    };
-
-                    workoutExerciseSelect.onchange = (event) => {
-                        const selectedExerciseName = event.target.value;
-                        const selectedWorkoutType = workoutNameSelect.value;
-                        if (workoutDetails[selectedWorkoutType] && Array.isArray(workoutDetails[selectedWorkoutType].exercises)) {
-                            const exercise = workoutDetails[selectedWorkoutType].exercises.find(ex => ex.name === selectedExerciseName);
-                            if (exercise) {
-                                workoutDescriptionTextarea.value = exercise.name + ": " + exercise.description;
-                            } else {
-                                workoutDescriptionTextarea.value = '';
-                            }
-                        }
-                    };
-
-                    document.getElementById('workout-form').onsubmit = handleSaveWorkout;
-                    document.getElementById('cancel-workout-btn').onclick = closeWorkoutModal;
-                }
-            }
-
-            /**
-             * Renders the content of the diet modal.
-             */
-            function renderDietModal() {
-                const title = "Sua Dieta Completa";
-                renderModal(isDietModalOpen, title, _getDietModalContentHtml(), closeDietModal);
-
-                if (isDietModalOpen) {
-                    document.getElementById('diet-form').onsubmit = handleSaveDiet;
-                    document.getElementById('cancel-diet-btn').onclick = closeDietModal;
-                }
-            }
-
-            /**
-             * Renders the content of the weight modal.
-             */
-            function renderWeightModal() {
-                const title = "Registrar Seu Peso";
-                renderModal(isWeightModalOpen, title, _getWeightModalContentHtml(), closeWeightModal);
-
-                if (isWeightModalOpen) {
-                    document.getElementById('weight-form').onsubmit = handleSaveWeight;
-                    document.getElementById('cancel-weight-btn').onclick = closeWeightModal;
-                }
-            }
-
-            // --- Main Render Function ---
-            /**
-             * Renders the appropriate screen based on the current user's authentication state.
-             */
-            function renderApp() {
-                if (!firebase || !auth || !db) {
-                    appRoot.innerHTML = `
-                        <div class="flex justify-center items-center h-full min-h-[300px] text-xl text-gray-400">
-                            Carregando Firebase SDK...
-                        </div>
-                    `;
-                    return;
-                }
-
-                if (!currentUser) {
-                    appRoot.innerHTML = _getAuthScreenHtml(isLoginMode);
-                } else {
-                    appRoot.innerHTML = _getMainAppContentHtml();
-                }
-                // Modals are rendered separately, not part of appRoot's innerHTML
-                renderWorkoutModal();
-                renderDietModal();
-                renderWeightModal();
-                renderConfirmationModal();
-            }
-
-            // --- Initial Application Setup when DOM is ready ---
-            window.onload = function() {
-                // Initial render of the loading screen
-                appRoot.innerHTML = `
-                    <div class="flex justify-center items-center h-full min-h-[300px] text-xl text-gray-400">
-                        Carregando aplicativo...
-                    </div>
-                `;
-
-                auth.onAuthStateChanged(async (user) => {
-                    if (user) {
-                        currentUser = user;
-                        userId = user.uid;
-                        await loadUserData(user); // Load user data after successful login
-                    } else {
-                        currentUser = null;
-                        userId = null;
-                    }
-                    renderApp(); // Render the appropriate screen after auth state and data are determined
-                });
-
-                document.body.addEventListener('click', (event) => {
-                    const target = event.target;
-                    const clickedElement = target.closest('.add-workout-btn, .edit-workout-btn, .delete-workout-btn, #logout-btn, #clear-error-btn, #open-diet-modal-btn, #open-weight-modal-btn, #toggle-auth-mode-btn, .day-box-clickable');
-
-                    if (clickedElement) {
-                        if (clickedElement.matches('.add-workout-btn')) {
-                            openAddWorkoutModal(clickedElement.dataset.day);
-                        } else if (clickedElement.matches('.edit-workout-btn')) {
-                            const day = clickedElement.dataset.day;
-                            const workoutId = clickedElement.dataset.workoutId;
-                            const workout = workouts[day.toLowerCase()].find(w => w.id === workoutId); // Use toLowerCase() here
-                            if (workout) openEditWorkoutModal(day, workout);
-                        } else if (clickedElement.matches('.delete-workout-btn')) {
-                            handleDeleteWorkoutClick(clickedElement.dataset.day, clickedElement.dataset.workoutId);
-                        } else if (clickedElement.matches('#logout-btn')) {
-                            handleLogout();
-                        } else if (clickedElement.matches('#clear-error-btn')) {
-                            clearAuthError();
-                        } else if (clickedElement.matches('#open-diet-modal-btn')) {
-                            openDietModal();
-                        } else if (clickedElement.matches('#open-weight-modal-btn')) {
-                            openWeightModal();
-                        } else if (clickedElement.matches('#toggle-auth-mode-btn')) {
-                            isLoginMode = !isLoginMode;
-                            renderApp();
-                        } else if (clickedElement.matches('.day-box-clickable')) {
-                            // When a day box is clicked, open the workout modal for that day
-                            openAddWorkoutModal(clickedElement.dataset.day);
-                        }
-                    }
-                });
-            };
-        })();
-    </script>
+    // Render inicial
+    renderApp();
+  </script>
 </body>
 </html>
