@@ -120,19 +120,19 @@
             let currentUser = null; // Stores the logged-in Firebase user object
             let userId = null; // Stores the user's UID for Firestore paths
             let workouts = { // Stores workouts organized by day
-                'segunda-feira': [], // Standardized to lowercase
-                'terça-feira': [],   // Standardized to lowercase
-                'quarta-feira': [],  // Standardized to lowercase
-                'quinta-feira': [],  // Standardized to lowercase
-                'sexta-feira': [],   // Standardized to lowercase
-                'sábado': [],        // Standardized to lowercase
+                'segunda-feira': [], // Padronizado para minúsculas
+                'terça-feira': [],   // Padronizado para minúsculas
+                'quarta-feira': [],  // Padronizado para minúsculas
+                'quinta-feira': [],  // Padronizado para minúsculas
+                'sexta-feira': [],   // Padronizado para minúsculas
+                'sábado': [],        // Padronizado para minúsculas
                 'domingo': [],       // Standardized to lowercase
             };
-            let diet = ''; // Stores the diet plan
-            let weight = ''; // Stores the current weight
-            let authError = ''; // Error message for authentication or other actions
-            let editingWorkout = null; // Stores the workout being edited (or null)
-            let currentDay = ''; // The day of the week currently selected for adding/editing a workout
+            let diet = ''; // Armazena o plano de dieta
+            let weight = ''; // Armazena o peso atual
+            let authError = ''; // Mensagem de erro para autenticação ou outras ações
+            let editingWorkout = null; // Armazena o treino que está sendo editado (ou null)
+            let currentDay = ''; // O dia da semana atualmente selecionado para adicionar/editar treino
 
             // Variables to control modal visibility
             let isWorkoutModalOpen = false;
@@ -232,35 +232,334 @@
                 }
             };
 
-            // --- Main Render Function ---
-            /**
-             * Renders the appropriate screen based on the current user's authentication state.
-             */
-            function renderApp() {
-                if (!firebase || !auth || !db) {
-                    appRoot.innerHTML = `
-                        <div class="flex justify-center items-center h-full min-h-[300px] text-xl text-gray-700 dark:text-gray-300">
-                            Carregando Firebase SDK...
-                        </div>
-                    `;
-                    return;
-                }
-
-                if (!currentUser) {
-                    appRoot.innerHTML = _getAuthScreenHtml(isLoginMode);
-                } else {
-                    appRoot.innerHTML = _getMainAppContentHtml();
-                }
-                // Modals are rendered separately, not part of appRoot's innerHTML
-                renderWorkoutModal();
-                renderDietModal();
-                renderWeightModal();
-                renderConfirmationModal();
+            // --- Funções de Fechamento dos Modais (Declaradas no escopo principal) ---
+            function closeWorkoutModal() {
+                isWorkoutModalOpen = false;
+                // Não chama renderWorkoutModal() aqui, pois renderApp() será chamado logo em seguida
+                // para redesenhar a tela principal com o estado atualizado.
             }
 
+            function closeDietModal() {
+                isDietModalOpen = false;
+                // Não chama renderDietModal() aqui
+            }
 
-            // --- Helper Functions for DOM Manipulation and General Logic ---
+            function closeWeightModal() {
+                isWeightModalOpen = false;
+                // Não chama renderWeightModal() aqui
+            }
 
+            function closeConfirmationModal() {
+                isConfirmationModalOpen = false;
+                // Não chama renderConfirmationModal() aqui
+            }
+
+            // --- HTML Content Generators (pure functions) ---
+            /**
+             * Returns the HTML for the authentication screen (Login/Register).
+             * @param {boolean} isLoginModeParam - Indicates if the current mode is login or register.
+             */
+            function _getAuthScreenHtml(isLoginModeParam) {
+                return `
+                    <div class="relative z-10 rounded-2xl shadow-2xl p-6 md:p-8 my-8 w-full max-w-sm mx-auto text-center flex flex-col items-center bg-gray-900 border border-gray-700">
+                        <h2 id="auth-title" class="text-3xl md:text-4xl font-extrabold mb-8 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 drop-shadow-lg">
+                            ${isLoginModeParam ? 'Login' : 'Criar Conta'}
+                        </h2>
+                        ${authError ? `<div class="bg-red-700 text-white p-3 rounded-md mb-4 flex justify-between items-center animate-fade-in border border-red-500"><span>${authError}</span><button id="clear-error-btn" class="font-bold text-lg">&times;</button></div>` : ''}
+                        <form id="auth-form" class="space-y-6 w-full max-w-xs">
+                            <div>
+                                <input type="email" placeholder="E-mail" id="auth-email" class="w-full px-4 py-3 rounded-lg border focus:ring-blue-500 focus:border-blue-500" required />
+                            </div>
+                            <div>
+                                <input type="password" placeholder="Senha" id="auth-password" class="w-full px-4 py-3 rounded-lg border focus:ring-blue-500 focus:border-blue-500" required />
+                            </div>
+                            <button type="submit" id="auth-submit-btn" class="w-full btn-primary font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
+                                ${isLoginModeParam ? 'Entrar' : 'Registrar'}
+                            </button>
+                        </form>
+                        <button id="toggle-auth-mode-btn" class="mt-6 text-blue-400 hover:underline transition-colors duration-300">
+                            ${isLoginModeParam ? 'Não tem uma conta? Crie uma!' : 'Já tem uma conta? Faça login!'}
+                        </button>
+                    </div>
+                `;
+            }
+
+            /**
+             * Returns the HTML for the main application interface (all days of the week).
+             */
+            function _getMainAppContentHtml() {
+                let workoutsHtml = '';
+                for (const dayDisplay of daysOfWeekDisplay) { // Use daysOfWeekDisplay for visible text
+                    const dayKey = dayMap[dayDisplay]; // Get the standardized key
+                    const dayWorkouts = workouts[dayKey] || []; // Ensure it's an array for consistency
+
+                    let dayWorkoutsList = '';
+                    if (dayWorkouts.length === 0) {
+                        dayWorkoutsList = '<p class="text-gray-400 italic text-sm">Nenhum treino adicionado.</p>';
+                    } else {
+                        dayWorkoutsList = '<ul class="list-disc list-inside space-y-1 text-gray-300">';
+                        dayWorkouts.forEach(workout => {
+                            dayWorkoutsList += `
+                                <li class="text-sm flex justify-between items-center">
+                                    <div>
+                                        <span class="font-semibold text-cyan-400">${workout.name}:</span> ${workout.description}
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button data-day="${dayDisplay}" data-workout-id="${workout.id}" class="edit-workout-btn text-blue-400 hover:text-blue-200 focus:outline-none transition-colors duration-200" title="Editar Treino">
+                                            ✏️
+                                        </button>
+                                        <button data-day="${dayDisplay}" data-workout-id="${workout.id}" class="delete-workout-btn text-red-400 hover:text-red-200 focus:outline-none transition-colors duration-200" title="Excluir Treino">
+                                            🗑️
+                                        </button>
+                                    </div>
+                                </li>
+                            `;
+                        });
+                        dayWorkoutsList += '</ul>';
+                    }
+
+                    workoutsHtml += `
+                        <div data-day="${dayDisplay}" class="day-box-clickable cursor-pointer bg-gray-700 hover:bg-gray-600 rounded-xl p-5 shadow-lg transform hover:scale-102 transition-all duration-300 border border-gray-600">
+                            <h3 class="text-xl font-bold text-white mb-4 border-b border-gray-500 pb-2">${dayDisplay}</h3>
+                            ${dayWorkoutsList}
+                            <button data-day="${dayDisplay}" class="add-workout-btn mt-5 w-full btn-primary py-2 px-4 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
+                                Adicionar Treino
+                            </button>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="flex justify-between items-center w-full mb-10">
+                        <h1 class="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 drop-shadow-lg animate-pulse-fade">
+                            💪 GymTech 💪
+                        </h1>
+                        <button id="logout-btn" class="btn-danger font-bold py-2 px-4 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
+                            Sair
+                        </button>
+                    </div>
+
+                    <div class="bg-amber-900 bg-opacity-70 text-white p-3 rounded-md mb-8 animate-fade-in text-center border-l-4 border-yellow-400 shadow-md">
+                        <p class="font-bold text-sm mb-1">A escolha das repetições deve sempre estar alinhada com o seu objetivo principal:</p>
+                        <ul class="list-disc list-inside mx-auto max-w-fit text-left text-xs">
+                            <li><strong class="text-yellow-200">Força (1-5 repetições):</strong> Usando cargas muito pesadas.</li>
+                            <li><strong class="text-yellow-200">Hipertrofia (6-12 repetições):</strong> O mais comum para ganho de massa muscular.</li>
+                            <li><strong class="text-yellow-200">Resistência (15+ repetições):</strong> Usando cargas leves a moderadas.</li>
+                        </ul>
+                    </div>
+
+                    ${authError ? `<div class="bg-red-700 text-white p-3 rounded-md mb-4 flex justify-between items-center animate-fade-in border border-red-500 shadow-md"><span>${authError}</span><button id="clear-error-btn" class="font-bold text-lg">&times;</button></div>` : ''}
+
+                    <section class="mb-12 w-full">
+                        <h2 class="text-3xl font-bold mb-6 text-center text-gray-200">Seus Treinos Semanais</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            ${workoutsHtml}
+                        </div>
+                    </section>
+
+                    <div class="flex flex-col md:flex-row gap-6 w-full justify-center">
+                        <section class="mb-12 bg-gradient-to-r from-emerald-700 to-green-800 rounded-2xl p-6 shadow-xl transform hover:scale-102 transition-all duration-300 flex-1 border border-emerald-600">
+                            <h2 class="text-3xl font-bold text-white text-center mb-4">Sua Dieta</h2>
+                            <div class="bg-gray-900 rounded-lg p-4 shadow-inner min-h-[100px] flex items-center justify-center border border-gray-700">
+                                ${diet ? `<p class="text-gray-300 whitespace-pre-wrap text-lg text-center">${diet}</p>` : `<p class="text-gray-500 italic text-lg text-center">Nenhuma dieta adicionada ainda.</p>`}
+                            </div>
+                            <button id="open-diet-modal-btn" class="mt-6 w-full btn-success font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105">
+                                ${diet ? 'Editar Dieta' : 'Adicionar Dieta'}
+                            </button>
+                        </section>
+
+                        <section class="mb-12 bg-gradient-to-r from-indigo-700 to-purple-800 rounded-2xl p-6 shadow-xl transform hover:scale-102 transition-all duration-300 flex-1 border border-indigo-600">
+                            <h2 class="text-3xl font-bold text-white text-center mb-4">Seu Peso</h2>
+                            <div class="bg-gray-900 rounded-lg p-4 shadow-inner min-h-[80px] flex items-center justify-center border border-gray-700">
+                                ${weight ? `<p class="text-gray-300 text-5xl font-extrabold">${weight} kg</p>` : `<p class="text-gray-500 italic text-lg text-center">Nenhum peso registrado ainda.</p>`}
+                            </div>
+                            <button id="open-weight-modal-btn" class="mt-6 w-full btn-primary font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105">
+                                ${weight ? 'Atualizar Peso' : 'Registrar Peso'}
+                            </button>
+                        </section>
+                    </div>
+                `;
+            }
+
+            /**
+             * Returns the HTML content for the workout modal form.
+             */
+            function _getWorkoutModalContentHtml() {
+                const workoutNames = Object.keys(workoutDetails);
+                let workoutOptionsHtml = '<option value="">Selecione o treino</option>';
+                workoutNames.forEach(name => {
+                    const selected = (editingWorkout && editingWorkout.name === name) ? 'selected' : '';
+                    workoutOptionsHtml += `<option value="${name}" ${selected}>${name}</option>`;
+                });
+
+                let exerciseOptionsHtml = '<option value="">Selecione o Exercício</option>';
+                let initialDescription = '';
+                let initialMachinesHtml = '<p class="text-gray-400 italic">Selecione o tipo de treino para ver as máquinas.</p>';
+                let exerciseSelectDisabled = 'disabled';
+
+                if (editingWorkout) {
+                    const selectedWorkoutType = typeof editingWorkout.name === 'string' ? editingWorkout.name : '';
+                    const currentWorkoutDetail = workoutDetails[selectedWorkoutType];
+
+                    const savedExerciseName = typeof editingWorkout.description === 'string' ? editingWorkout.description : '';
+
+                    if (currentWorkoutDetail && Array.isArray(currentWorkoutDetail.exercises)) {
+                        exerciseSelectDisabled = '';
+                        currentWorkoutDetail.exercises.forEach(ex => {
+                            const selected = (savedExerciseName === ex.name) ? 'selected' : '';
+                            exerciseOptionsHtml += `<option value="${ex.name}" ${selected}>${ex.name}</option>`;
+                        });
+
+                        if (currentWorkoutDetail.machines && Array.isArray(currentWorkoutDetail.machines) && currentWorkoutDetail.machines.length > 0) {
+                            initialMachinesHtml = '<ul class="list-disc list-inside space-y-1 text-gray-300">';
+                            currentWorkoutDetail.machines.forEach(machine => {
+                                machinesHtml += `<li><span class="font-semibold">${machine.name}:</span> ${machine.description}</li>`;
+                            });
+                            initialMachinesHtml += '</ul>';
+                        } else {
+                            initialMachinesHtml = '<p class="text-gray-400 italic">Nenhuma máquina específica listada para este treino.</p>';
+                        }
+
+                        const exerciseNameForEdit = savedExerciseName;
+                        const fullExerciseDetail = currentWorkoutDetail.exercises.find(ex => ex.name === exerciseNameForEdit);
+                        if (fullExerciseDetail) {
+                            initialDescription = `${fullExerciseDetail.name}: ${fullExerciseDetail.description}`;
+                        } else {
+                            initialDescription = savedExerciseName;
+                        }
+                    } else {
+                        exerciseSelectDisabled = 'disabled';
+                        exerciseOptionsHtml = '<option value="">Selecione o Exercício</option>';
+                        initialMachinesHtml = '<p class="text-gray-400 italic">Tipo de treino inválido ou não encontrado.</p>';
+                        initialDescription = savedExerciseName;
+                    }
+                }
+
+                return `
+                    <form id="workout-form" class="space-y-6">
+                        <div>
+                            <label for="workoutName" class="block text-sm font-medium text-gray-200 mb-2">
+                                Tipo de Treino
+                            </label>
+                            <select
+                                id="workoutName"
+                                name="workoutName"
+                                class="mt-1 block w-full px-4 py-3 rounded-lg border focus:ring-blue-500 focus:border-blue-500"
+                                required
+                            >
+                                ${workoutOptionsHtml}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="workoutExercise" class="block text-sm font-medium text-gray-200 mb-2">
+                                Exercício
+                            </label>
+                            <select
+                                id="workoutExercise"
+                                name="workoutExercise"
+                                class="mt-1 block w-full px-4 py-3 rounded-lg border focus:ring-blue-500 focus:border-blue-500"
+                                ${exerciseSelectDisabled}
+                            >
+                                ${exerciseOptionsHtml}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-200 mb-2">
+                                Máquinas
+                            </label>
+                            <div id="machinesBox" class="mt-1 block w-full px-4 py-3 rounded-md border bg-gray-700 text-gray-200 min-h-[80px] overflow-auto">
+                                ${initialMachinesHtml}
+                            </div>
+                        </div>
+                        <div>
+                            <label for="workoutDescription" class="block text-sm font-medium text-gray-200 mb-2">
+                                Descrição (Exercícios e Repetições Sugeridas)
+                            </label>
+                            <textarea
+                                id="workoutDescription"
+                                name="workoutDescription"
+                                rows="10"
+                                class="mt-1 block w-full px-4 py-3 rounded-lg border focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Ex: Agachamento 3x10, Leg Press 4x12..."
+                            >${initialDescription}</textarea>
+                        </div>
+                        <div class="flex justify-end space-x-4">
+                            <button type="button" id="cancel-workout-btn" class="btn-neutral font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
+                                Cancelar
+                            </button>
+                            <button type="submit" id="save-workout-btn" class="btn-primary font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
+                                ${editingWorkout ? 'Salvar Alterações' : 'Adicionar Treino'}
+                            </button>
+                        </div>
+                    </form>
+                `;
+            }
+
+            /**
+             * Returns the HTML content for the diet modal form.
+             */
+            function _getDietModalContentHtml() {
+                return `
+                    <form id="diet-form" class="space-y-6">
+                        <div>
+                            <label for="dietPlan" class="block text-sm font-medium text-gray-200 mb-2">
+                                Plano de Dieta
+                            </label>
+                            <textarea
+                                id="dietPlan"
+                                name="dietPlan"
+                                rows="10"
+                                class="mt-1 block w-full px-4 py-3 rounded-lg border focus:ring-green-500 focus:border-green-500"
+                                placeholder="Descreva sua dieta para a semana, refeição por refeição."
+                            >${diet}</textarea>
+                        </div>
+                        <div class="flex justify-end space-x-4">
+                            <button type="button" id="cancel-diet-btn" class="btn-neutral font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
+                                Cancelar
+                            </button>
+                            <button type="submit" id="save-diet-btn" class="btn-success font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
+                                Salvar Dieta
+                            </button>
+                        </div>
+                    </form>
+                `;
+            }
+
+            /**
+             * Returns the HTML content for the weight modal form.
+             */
+            function _getWeightModalContentHtml() {
+                return `
+                    <form id="weight-form" class="space-y-6">
+                        <div>
+                            <label for="newWeight" class="block text-sm font-medium text-gray-200 mb-2">
+                                Peso (kg)
+                            </label>
+                            <input
+                                type="number"
+                                id="newWeight"
+                                name="newWeight"
+                                step="0.1"
+                                min="0"
+                                value="${weight}"
+                                class="mt-1 block w-full px-4 py-3 rounded-lg border focus:ring-purple-500 focus:border-purple-500"
+                                placeholder="Ex: 75.5"
+                                required
+                            />
+                        </div>
+                        <div class="flex justify-end space-x-4">
+                            <button type="button" id="cancel-weight-btn" class="btn-neutral font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
+                                Cancelar
+                            </button>
+                            <button type="submit" id="save-weight-btn" class="btn-primary font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
+                                Salvar Peso
+                            </button>
+                        </div>
+                    </form>
+                `;
+            }
+
+            // --- Modal Render Functions ---
             /**
              * Renders a generic modal on the screen.
              * @param {boolean} isOpen - Whether the modal should be visible.
@@ -283,14 +582,14 @@
                 modalWrapper.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50';
 
                 const modalContent = document.createElement('div');
-                modalContent.className = 'bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg relative animate-fade-in-up';
+                modalContent.className = 'bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg relative animate-fade-in-up border border-gray-700';
 
                 const modalTitle = document.createElement('h2');
-                modalTitle.className = 'text-2xl font-bold mb-4 text-gray-800 dark:text-white border-b pb-2';
+                modalTitle.className = 'text-2xl font-bold mb-4 text-white border-b border-gray-600 pb-2';
                 modalTitle.textContent = title;
 
                 const closeButton = document.createElement('button');
-                closeButton.className = 'absolute top-3 right-3 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-3xl font-bold';
+                closeButton.className = 'absolute top-3 right-3 text-gray-400 hover:text-white text-3xl font-bold';
                 closeButton.innerHTML = '&times;'; // Close icon
                 closeButton.onclick = closeCallback; // Assign the close function
 
@@ -311,704 +610,31 @@
             function renderConfirmationModal() {
                 const message = "Tem certeza que deseja excluir este treino?";
                 const contentHtml = `
-                    <p class="text-gray-700 dark:text-gray-300 mb-6 text-center">${message}</p>
+                    <p class="text-gray-300 mb-6 text-center">${message}</p>
                     <div class="flex justify-around space-x-4">
-                        <button id="confirm-delete-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105">
+                        <button id="confirm-delete-btn" class="btn-danger font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105">
                             Confirmar
                         </button>
-                        <button id="cancel-delete-btn" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105">
+                        <button id="cancel-delete-btn" class="btn-neutral font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105">
                             Cancelar
                         </button>
                     </div>
                 `;
-                renderModal(isConfirmationModalOpen, "Confirmação", contentHtml, cancelDeleteWorkout);
+                renderModal(isConfirmationModalOpen, "Confirmação", contentHtml, closeConfirmationModal); // Use closeConfirmationModal
 
                 if (isConfirmationModalOpen) {
                     // Assign event listeners to the confirmation modal buttons
                     document.getElementById('confirm-delete-btn').onclick = confirmDeleteWorkout;
-                    document.getElementById('cancel-delete-btn').onclick = cancelDeleteWorkout;
+                    document.getElementById('cancel-delete-btn').onclick = closeConfirmationModal; // Use closeConfirmationModal
                 }
-            }
-
-            /**
-             * Displays a temporary message (error or success) on the interface.
-             * @param {string} message - The message to display.
-             * @param {'error'|'success'} type - The type of message (controls color).
-             */
-            function showTempMessage(message, type) {
-                authError = message; // Update the error message state variable
-                renderApp(); // Force re-render to show the message
-                setTimeout(() => {
-                    authError = ''; // Clear the message after 3 seconds
-                    renderApp(); // Force re-render to hide the message
-                }, 3000);
-            }
-
-            /**
-             * Clears the current authentication error message.
-             */
-            function clearAuthError() {
-                authError = '';
-                renderApp(); // Re-render to remove the message from the UI
-            }
-
-            // --- Firebase Authentication Functions ---
-
-            /**
-             * Attempts to log in a user with email and password in Firebase.
-             * @param {string} email - The user's email.
-             * @param {string} password - The user's password.
-             */
-            async function handleLogin(email, password) {
-                try {
-                    clearAuthError(); // Clear any previous errors
-                    const userCredential = await auth.signInWithEmailAndPassword(email, password);
-                    currentUser = userCredential.user;
-                    userId = currentUser.uid;
-                    await loadUserData(currentUser); // Load user data after successful login
-                    renderApp(); // Re-render to the main application screen
-                } catch (error) {
-                    console.error("Error logging in:", error);
-                    let errorMessage = 'Erro ao fazer login. Verifique seu e-mail e senha.';
-                    if (error.code === 'auth/user-not-found') {
-                        errorMessage = 'Usuário não encontrado.';
-                    } else if (error.code === 'auth/wrong-password') {
-                        errorMessage = 'Senha incorreta.';
-                    } else if (error.code === 'auth/invalid-email') {
-                        errorMessage = 'Formato de e-mail inválido.';
-                    }
-                    showTempMessage(errorMessage, 'error'); // Display the error message
-                }
-            }
-
-            /**
-             * Attempts to register a new user with email and password in Firebase.
-             * @param {string} email - The new user's email.
-             * @param {string} password - The new user's password.
-             */
-            async function handleRegister(email, password) {
-                try {
-                    clearAuthError(); // Clear any previous errors
-                    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                    currentUser = userCredential.user;
-                    userId = currentUser.uid;
-                    // No data to load for a new user, but they are logged in and ready to input data
-                    renderApp(); // Re-render to the main application screen
-                } catch (error) {
-                    console.error("Error registering:", error);
-                    let errorMessage = 'Erro ao registrar. Tente novamente.';
-                    if (error.code === 'auth/email-already-in-use') {
-                        errorMessage = 'Este e-mail já está em uso.';
-                    } else if (error.code === 'auth/weak-password') {
-                        errorMessage = 'A senha deve ter pelo menos 6 caracteres.';
-                    } else if (error.code === 'auth/invalid-email') {
-                        errorMessage = 'Formato de e-mail inválido.';
-                    }
-                    showTempMessage(errorMessage, 'error'); // Display the error message
-                }
-            }
-
-            /**
-             * Performs logout of the current user from Firebase.
-             */
-            async function handleLogout() {
-                try {
-                    await auth.signOut(); // Logs out from Firebase
-                    currentUser = null; // Clear current user
-                    userId = null;
-                    // Clear local state after logout
-                    workouts = {
-                        'segunda-feira': [], 'terça-feira': [], 'quarta-feira': [], 'quinta-feira': [],
-                        'sexta-feira': [], 'sábado': [], 'domingo': [],
-                    };
-                    diet = '';
-                    weight = '';
-                    renderApp(); // Re-render to the authentication screen
-                } catch (error) {
-                    console.error("Error logging out:", error);
-                    showTempMessage('Erro ao fazer logout. Tente novamente.', 'error');
-                }
-            }
-
-            /**
-             * Loads user data (workouts, diet, weight) from Firestore.
-             * @param {object} userObj - The current Firebase user object.
-             */
-            async function loadUserData(userObj) {
-                if (!userObj || !userObj.uid) return;
-
-                try {
-                    // 1. Load Workouts
-                    const workoutsCollectionRef = db.collection(`artifacts/${appId}/users/${userObj.uid}/workouts`);
-                    const workoutsSnapshot = await workoutsCollectionRef.get();
-                    const loadedWorkouts = {
-                        'segunda-feira': [], 'terça-feira': [], 'quarta-feira': [], 'quinta-feira': [],
-                        'sexta-feira': [], 'sábado': [], 'domingo': [],
-                    };
-                    workoutsSnapshot.forEach(doc => {
-                        const data = doc.data();
-                        const day = data.day.toLowerCase(); // Padroniza para minúsculas ao carregar
-                        if (loadedWorkouts[day]) {
-                            loadedWorkouts[day].push({
-                                id: doc.id, // Firestore document ID
-                                name: data.name,
-                                description: data.description,
-                            });
-                        }
-                    });
-                    workouts = loadedWorkouts;
-                    console.log('Workouts loaded:', workouts); // Debugging log
-
-                    // 2. Load Diet
-                    const dietDocRef = db.collection(`artifacts/${appId}/users/${userObj.uid}/diet`).doc('userDietDoc');
-                    const dietDoc = await dietDocRef.get();
-                    if (dietDoc.exists) {
-                        diet = dietDoc.data().plan;
-                    } else {
-                        diet = '';
-                    }
-
-                    // 3. Load Weight (most recent entry)
-                    const weightsCollectionRef = db.collection(`artifacts/${appId}/users/${userObj.uid}/weights`);
-                    const allWeightsSnapshot = await weightsCollectionRef.get();
-                    const allWeights = [];
-                    allWeightsSnapshot.forEach(doc => {
-                        allWeights.push({ id: doc.id, ...doc.data() });
-                    });
-
-                    allWeights.sort((a, b) => {
-                        const timeA = a.createdAt ? a.createdAt.toDate().getTime() : 0;
-                        const timeB = b.createdAt ? b.createdAt.toDate().getTime() : 0;
-                        return timeB - timeA;
-                    });
-
-                    if (allWeights.length > 0) {
-                        weight = allWeights[0].value;
-                    } else {
-                        weight = '';
-                    }
-                    // Removed renderApp() call from here. It's called in onAuthStateChanged now.
-                } catch (error) {
-                    console.error("Error loading user data:", error);
-                    showTempMessage('Erro ao carregar seus dados. Tente novamente.', 'error');
-                }
-            }
-
-            // --- Workout Manipulation Functions ---
-
-            /**
-             * Opens the workout modal to add a new workout for a specific day.
-             * @param {string} day - The day of the week the workout will be added to.
-             */
-            function openAddWorkoutModal(day) {
-                console.log(`Opening modal to add workout for: ${day}`); // Debugging
-                editingWorkout = null; // Ensures we are not in edit mode
-                currentDay = day.toLowerCase(); // Standardize to lowercase
-                isWorkoutModalOpen = true; // Open the modal
-                renderModal(isWorkoutModalOpen, `Adicionar Treino para ${day}`, _getWorkoutModalContentHtml(), closeWorkoutModal); // Pass closeWorkoutModal
-            }
-
-            /**
-             * Opens the workout modal to edit an existing workout.
-             * @param {string} day - The day of the week of the workout.
-             * @param {object} workout - The workout object to be edited.
-             */
-            function openEditWorkoutModal(day, workout) {
-                console.log(`Opening modal to edit workout for: ${day}, Workout ID: ${workout.id}`); // Debugging
-                editingWorkout = workout; // Set the workout to be edited
-                currentDay = day.toLowerCase(); // Standardize to lowercase
-                isWorkoutModalOpen = true; // Open the modal
-                renderModal(isWorkoutModalOpen, 'Editar Treino', _getWorkoutModalContentHtml(), closeWorkoutModal); // Pass closeWorkoutModal
-            }
-
-            /**
-             * Closes the add/edit workout modal and clears related state.
-             */
-            function closeWorkoutModal() {
-                console.log('Closing workout modal.'); // Debugging
-                isWorkoutModalOpen = false;
-                editingWorkout = null;
-                currentDay = '';
-                // No need to call renderWorkoutModal() here, it's only for opening
-                // The main app will be re-rendered after save/delete operations
-            }
-
-            /**
-             * Handles saving (adding or editing) a workout to Firestore.
-             * @param {Event} event - The form submission event.
-             */
-            async function handleSaveWorkout(event) {
-                event.preventDefault(); // Prevents page reload
-                if (!userId) {
-                    showTempMessage('Usuário não autenticado. Faça login para salvar treinos.', 'error');
-                    return;
-                }
-
-                const form = event.target;
-                const workoutType = form.workoutName.value;
-                const exerciseName = form.workoutExercise.value;
-
-                if (!workoutType.trim() || workoutType === "Selecione o treino") {
-                    showTempMessage('Por favor, selecione um tipo de treino.', 'error');
-                    return;
-                }
-                if (!exerciseName.trim() || exerciseName === "Selecione o Exercício") {
-                    showTempMessage('Por favor, selecione um exercício.', 'error');
-                    return;
-                }
-
-                let descriptionToSave = `${exerciseName}`;
-
-                try {
-                    const workoutsCollectionRef = db.collection(`artifacts/${appId}/users/${userId}/workouts`);
-                    if (editingWorkout) {
-                        const workoutDocRef = workoutsCollectionRef.doc(editingWorkout.id);
-                        await workoutDocRef.update({ name: workoutType, description: descriptionToSave });
-
-                        // Update local state to reflect changes in UI
-                        workouts[currentDay] = workouts[currentDay].map(w =>
-                            w.id === editingWorkout.id ? { ...w, name: workoutType, description: descriptionToSave } : w
-                        );
-                    } else {
-                        const newWorkoutDocRef = await workoutsCollectionRef.add({
-                            name: workoutType,
-                            description: descriptionToSave,
-                            day: currentDay, // Salva o dia padronizado
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-
-                        workouts[currentDay].push({
-                            id: newWorkoutDocRef.id,
-                            name: workoutType,
-                            description: descriptionToSave,
-                        });
-                    }
-                    closeWorkoutModal(); // Close the modal after saving
-                    console.log('Workouts after save operation:', workouts); // Debugging log
-                    renderApp(); // Force re-render of the main app to show updates
-                } catch (error) {
-                    console.error("Error saving workout:", error);
-                    let errorMessage = 'Erro ao salvar treino. Tente novamente.';
-                    if (error.code) {
-                        errorMessage += ` Código: ${error.code}.`;
-                    }
-                    if (error.message) {
-                        errorMessage += ` Mensagem: ${error.message}.`;
-                    }
-                    showTempMessage(errorMessage, 'error');
-                }
-            }
-
-            /**
-             * Prepares to delete a workout, opening the confirmation modal.
-             * @param {string} day - The day of the workout to be deleted.
-             * @param {string} workoutId - The ID of the workout to be deleted.
-             */
-            function handleDeleteWorkoutClick(day, workoutId) {
-                console.log(`Preparing to delete workout: ${day}, ID: ${workoutId}`); // Debugging
-                workoutToDelete = { day: day.toLowerCase(), workoutId }; // Standardize to lowercase
-                isConfirmationModalOpen = true; // Open the confirmation modal
-                renderConfirmationModal(); // Directly call modal rendering
-            }
-
-            /**
-             * Confirms and executes workout deletion from Firestore.
-             */
-            async function confirmDeleteWorkout() {
-                console.log('Confirming workout deletion.'); // Debugging
-                if (!userId) {
-                    showTempMessage('Usuário não autenticado. Faça login para excluir treinos.', 'error');
-                    return;
-                }
-                if (workoutToDelete) {
-                    try {
-                        const workoutDocRef = db.collection(`artifacts/${appId}/users/${userId}/workouts`).doc(workoutToDelete.workoutId);
-                        await workoutDocRef.delete(); // Delete workout from Firestore
-
-                        // Remove workout from local state
-                        workouts[workoutToDelete.day] = workouts[workoutToDelete.day].filter(
-                            workout => workout.id !== workoutToDelete.workoutId
-                        );
-                    } catch (error) {
-                        console.error("Error deleting workout:", error);
-                        let errorMessage = 'Erro ao excluir treino. Tente novamente.';
-                        if (error.code) {
-                            errorMessage += ` Código: ${error.code}.`;
-                        }
-                        if (error.message) {
-                            errorMessage += ` Mensagem: ${error.message}.`;
-                        }
-                        showTempMessage(errorMessage, 'error');
-                    }
-                }
-                isConfirmationModalOpen = false; // Close the confirmation modal
-                workoutToDelete = null; // Clear the reference to the workout to be deleted
-                renderConfirmationModal(); // Directly call modal rendering to close
-                console.log('Workouts after delete operation:', workouts); // Debugging log
-                renderApp(); // Force re-render of the main app to show updates
-            }
-
-            /**
-             * Cancels workout deletion, closing the confirmation modal.
-             */
-            function cancelDeleteWorkout() {
-                console.log('Cancelling workout deletion.'); // Debugging
-                isConfirmationModalOpen = false;
-                workoutToDelete = null;
-                renderConfirmationModal(); // Directly call modal rendering to close
-            }
-
-            /**
-             * Opens the diet modal.
-             */
-            function openDietModal() {
-                console.log('Opening diet modal.'); // Debugging
-                isDietModalOpen = true;
-                renderModal(isDietModalOpen, "Sua Dieta Completa", _getDietModalContentHtml(), closeDietModal); // Pass closeDietModal
-            }
-
-            /**
-             * Closes the diet modal.
-             */
-            function closeDietModal() {
-                console.log('Closing diet modal.'); // Debugging
-                isDietModalOpen = false;
-                // No need to call renderDietModal() here, it's only for opening
-                // The main app will be re-rendered after save operations
-            }
-
-            /**
-             * Handles saving (adding or editing) the diet plan to Firestore.
-             * @param {Event} event - The form submission event.
-             */
-            async function handleSaveDiet(event) {
-                event.preventDefault();
-                if (!userId) {
-                    showTempMessage('Usuário não autenticado. Faça login para salvar a dieta.', 'error');
-                    return;
-                }
-                const dietPlan = event.target.dietPlan.value;
-
-                try {
-                    const dietDocRef = db.collection(`artifacts/${appId}/users/${userId}/diet`).doc('userDietDoc');
-                    await dietDocRef.set({ plan: dietPlan }, { merge: true });
-
-                    diet = dietPlan;
-                    closeDietModal();
-                    renderApp(); // Force re-render of the main app to show updates
-                } catch (error) {
-                    console.error("Error saving diet:", error);
-                    let errorMessage = 'Erro ao salvar dieta. Tente novamente.';
-                    if (error.code) {
-                        errorMessage += ` Código: ${error.code}.`;
-                    }
-                    if (error.message) {
-                        errorMessage += ` Mensagem: ${error.message}.`;
-                    }
-                    showTempMessage(errorMessage, 'error');
-                }
-            }
-
-            /**
-             * Opens the weight modal.
-             */
-            function openWeightModal() {
-                console.log('Opening weight modal.'); // Debugging
-                isWeightModalOpen = true;
-                renderModal(isWeightModalOpen, "Registrar Seu Peso", _getWeightModalContentHtml(), closeWeightModal); // Pass closeWeightModal
-            }
-
-            /**
-             * Closes the weight modal.
-             */
-            function closeWeightModal() {
-                console.log('Closing weight modal.'); // Debugging
-                isWeightModalOpen = false;
-                // No need to call renderWeightModal() here, it's only for opening
-                // The main app will be re-rendered after save operations
-            }
-
-            /**
-             * Handles saving a new weight entry to Firestore.
-             * @param {Event} event - The form submission event.
-             */
-            async function handleSaveWeight(event) {
-                event.preventDefault();
-                if (!userId) {
-                    showTempMessage('Usuário não autenticado. Faça login para registrar o peso.', 'error');
-                    return;
-                }
-                const newWeightValue = parseFloat(event.target.newWeight.value);
-
-                if (isNaN(newWeightValue) || newWeightValue <= 0) {
-                    showTempMessage('Por favor, insira um peso válido.', 'error');
-                    return;
-                }
-
-                try {
-                    await db.collection(`artifacts/${appId}/users/${userId}/weights`).add({
-                        value: newWeightValue,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-
-                    weight = newWeightValue;
-                    closeWeightModal();
-                    renderApp(); // Force re-render of the main app to show updates
-                } catch (error) {
-                    console.error("Error saving weight:", error);
-                    let errorMessage = 'Erro ao salvar peso. Tente novamente.';
-                    if (error.code) {
-                        errorMessage += ` Código: ${error.code}.`;
-                    }
-                    if (error.message) {
-                        errorMessage += ` Mensagem: ${error.message}.`;
-                    }
-                    showTempMessage(errorMessage, 'error');
-                }
-            }
-
-            /**
-             * Returns the HTML for the authentication screen (Login/Register).
-             * @param {boolean} isLoginModeParam - Indicates if the current mode is login or register.
-             */
-            function _getAuthScreenHtml(isLoginModeParam) { // Renomeado para retornar HTML
-                return `
-                    <div class="relative z-10 rounded-2xl shadow-2xl p-6 md:p-8 my-8 w-full max-w-sm mx-auto text-center flex flex-col items-center">
-                        <h2 id="auth-title" class="text-3xl md:text-4xl font-extrabold mb-8 text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-yellow-500 drop-shadow-lg">
-                            ${isLoginModeParam ? 'Login' : 'Criar Conta'}
-                        </h2>
-                        ${authError ? `<div class="bg-red-500 text-white p-3 rounded-md mb-4 flex justify-between items-center animate-fade-in"><span>${authError}</span><button id="clear-error-btn" class="font-bold text-lg">&times;</button></div>` : ''}
-                        <form id="auth-form" class="space-y-6 w-full max-w-xs">
-                            <div>
-                                <input type="email" placeholder="E-mail" id="auth-email" class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500 bg-transparent text-white placeholder-gray-300" required />
-                            </div>
-                            <div>
-                                <input type="password" placeholder="Senha" id="auth-password" class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500 bg-transparent text-white placeholder-gray-300" required />
-                            </div>
-                            <button type="submit" id="auth-submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
-                                ${isLoginModeParam ? 'Entrar' : 'Registrar'}
-                            </button>
-                        </form>
-                        <button id="toggle-auth-mode-btn" class="mt-6 text-blue-300 hover:underline transition-colors duration-300">
-                            ${isLoginModeParam ? 'Não tem uma conta? Crie uma!' : 'Já tem uma conta? Faça login!'}
-                        </button>
-                    </div>
-                `;
-            }
-
-            /**
-             * Returns the HTML for the main application interface (all days of the week).
-             */
-            function _getMainAppContentHtml() {
-                let workoutsHtml = '';
-                for (const dayDisplay of daysOfWeekDisplay) { // Use daysOfWeekDisplay for visible text
-                    const dayKey = dayMap[dayDisplay]; // Get the standardized key
-                    const dayWorkouts = workouts[dayKey] || []; // Ensure it's an array for consistency
-
-                    let dayWorkoutsList = '';
-                    if (dayWorkouts.length === 0) {
-                        dayWorkoutsList = '<p class="text-gray-600 dark:text-gray-400 italic text-sm">Nenhum treino adicionado.</p>';
-                    } else {
-                        dayWorkoutsList = '<ul class="list-disc list-inside space-y-1">';
-                        dayWorkouts.forEach(workout => {
-                            dayWorkoutsList += `
-                                <li class="text-sm text-gray-700 dark:text-gray-300 flex justify-between items-center">
-                                    <div>
-                                        <span class="font-semibold">${workout.name}:</span> ${workout.description}
-                                    </div>
-                                    <div class="flex space-x-2">
-                                        <button data-day="${dayDisplay}" data-workout-id="${workout.id}" class="edit-workout-btn text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-600 focus:outline-none" title="Editar Treino">
-                                            ✏️
-                                        </button>
-                                        <button data-day="${dayDisplay}" data-workout-id="${workout.id}" class="delete-workout-btn text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-600 focus:outline-none" title="Excluir Treino">
-                                            🗑️
-                                        </button>
-                                    </div>
-                                </li>
-                            `;
-                        });
-                        dayWorkoutsList += '</ul>';
-                    }
-
-                    workoutsHtml += `
-                        <div data-day="${dayDisplay}" class="day-box-clickable cursor-pointer bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-xl p-5 shadow-lg transform hover:scale-102 transition-all duration-300">
-                            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4 border-b border-gray-300 dark:border-gray-600 pb-2">${dayDisplay}</h3>
-                            ${dayWorkoutsList}
-                            <button data-day="${dayDisplay}" class="add-workout-btn mt-5 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
-                                Adicionar Treino
-                            </button>
-                        </div>
-                    `;
-                }
-
-                return `
-                    <div class="flex justify-between items-center mb-10">
-                        <h1 class="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-yellow-500 drop-shadow-lg animate-pulse-fade">
-                            💪 Meu Diário de Treinos 💪
-                        </h1>
-                        <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
-                            Sair
-                        </button>
-                    </div>
-
-                    <div class="bg-amber-800 bg-opacity-90 text-white p-3 rounded-md mb-4 animate-fade-in text-center border-l-4 border-yellow-400">
-                        <p class="font-bold text-sm mb-1">A escolha das repetições deve sempre estar alinhada com o seu objetivo principal:</p>
-                        <ul class="list-disc list-inside mx-auto max-w-fit text-left text-xs">
-                            <li><strong>Força (1-5 repetições):</strong> Usando cargas muito pesadas.</li>
-                            <li><strong>Hipertrofia (6-12 repetições):</strong> O mais comum para ganho de massa muscular.</li>
-                            <li><strong>Resistência (15+ repetições):</strong> Usando cargas leves a moderadas.</li>
-                        </ul>
-                    </div>
-
-                    ${authError ? `<div class="bg-red-500 text-white p-3 rounded-md mb-4 flex justify-between items-center animate-fade-in"><span>${authError}</span><button id="clear-error-btn" class="font-bold text-lg">&times;</button></div>` : ''}
-
-                    <section class="mb-12">
-                        <h2 class="text-3xl font-bold mb-6 text-center text-gray-800 dark:text-white">Seus Treinos Semanais</h2>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            ${workoutsHtml}
-                        </div>
-                    </section>
-
-                    <div class="flex flex-col md:flex-row gap-6 w-full justify-center">
-                        <section class="mb-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-6 shadow-xl transform hover:scale-102 transition-all duration-300 flex-1">
-                            <h2 class="text-3xl font-bold text-white text-center mb-4">Sua Dieta</h2>
-                            <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-inner min-h-[100px] flex items-center justify-center">
-                                ${diet ? `<p class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap text-lg text-center">${diet}</p>` : `<p class="text-gray-500 dark:text-gray-400 italic text-lg text-center">Nenhuma dieta adicionada ainda.</p>`}
-                            </div>
-                            <button id="open-diet-modal-btn" class="mt-6 w-full bg-white text-emerald-700 hover:bg-gray-100 font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105">
-                                ${diet ? 'Editar Dieta' : 'Adicionar Dieta'}
-                            </button>
-                        </section>
-
-                        <section class="mb-12 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-2xl p-6 shadow-xl transform hover:scale-102 transition-all duration-300 flex-1">
-                            <h2 class="text-3xl font-bold text-white text-center mb-4">Seu Peso</h2>
-                            <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-inner min-h-[80px] flex items-center justify-center">
-                                ${weight ? `<p class="text-gray-700 dark:text-gray-300 text-5xl font-extrabold">${weight} kg</p>` : `<p class="text-gray-500 dark:text-gray-400 italic text-lg text-center">Nenhum peso registrado ainda.</p>`}
-                            </div>
-                            <button id="open-weight-modal-btn" class="mt-6 w-full bg-white text-indigo-700 hover:bg-gray-100 font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105">
-                                ${weight ? 'Atualizar Peso' : 'Registrar Peso'}
-                            </button>
-                        </section>
-                    </div>
-                `;
             }
 
             /**
              * Renders the content of the add/edit workout modal.
              */
             function renderWorkoutModal() {
-                const title = editingWorkout ? 'Editar Treino' : `Adicionar Treino para ${currentDay}`;
-                const workoutNames = Object.keys(workoutDetails);
-                let workoutOptionsHtml = '<option value="">Selecione o treino</option>';
-                workoutNames.forEach(name => {
-                    const selected = (editingWorkout && editingWorkout.name === name) ? 'selected' : '';
-                    workoutOptionsHtml += `<option value="${name}" ${selected}>${name}</option>`;
-                });
-
-                let exerciseOptionsHtml = '<option value="">Selecione o Exercício</option>';
-                let initialDescription = '';
-                let initialMachinesHtml = '<p class="text-gray-600 dark:text-gray-400 italic">Selecione o tipo de treino para ver as máquinas.</p>';
-                let exerciseSelectDisabled = 'disabled';
-
-                if (editingWorkout) {
-                    const selectedWorkoutType = typeof editingWorkout.name === 'string' ? editingWorkout.name : '';
-                    const currentWorkoutDetail = workoutDetails[selectedWorkoutType];
-
-                    const savedExerciseName = typeof editingWorkout.description === 'string' ? editingWorkout.description : '';
-
-                    if (currentWorkoutDetail && Array.isArray(currentWorkoutDetail.exercises)) {
-                        exerciseSelectDisabled = '';
-                        currentWorkoutDetail.exercises.forEach(ex => {
-                            const selected = (savedExerciseName === ex.name) ? 'selected' : '';
-                            exerciseOptionsHtml += `<option value="${ex.name}" ${selected}>${ex.name}</option>`;
-                        });
-
-                        if (currentWorkoutDetail.machines && Array.isArray(currentWorkoutDetail.machines) && currentWorkoutDetail.machines.length > 0) {
-                            initialMachinesHtml = '<ul class="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">';
-                            currentWorkoutDetail.machines.forEach(machine => {
-                                machinesHtml += `<li><span class="font-semibold">${machine.name}:</span> ${machine.description}</li>`;
-                            });
-                            initialMachinesHtml += '</ul>';
-                        } else {
-                            initialMachinesHtml = '<p class="text-gray-600 dark:text-gray-400 italic">Nenhuma máquina específica listada para este treino.</p>';
-                        }
-
-                        const exerciseNameForEdit = savedExerciseName;
-                        const fullExerciseDetail = currentWorkoutDetail.exercises.find(ex => ex.name === exerciseNameForEdit);
-                        if (fullExerciseDetail) {
-                            initialDescription = `${fullExerciseDetail.name}: ${fullExerciseDetail.description}`;
-                        } else {
-                            initialDescription = savedExerciseName;
-                        }
-                    } else {
-                        exerciseSelectDisabled = 'disabled';
-                        exerciseOptionsHtml = '<option value="">Selecione o Exercício</option>';
-                        initialMachinesHtml = '<p class="text-gray-600 dark:text-gray-400 italic">Tipo de treino inválido ou não encontrado.</p>';
-                        initialDescription = savedExerciseName;
-                    }
-                }
-
-
-                const contentHtml = `
-                    <form id="workout-form" class="space-y-6">
-                        <div>
-                            <label for="workoutName" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                                Tipo de Treino
-                            </label>
-                            <select
-                                id="workoutName"
-                                name="workoutName"
-                                class="mt-1 block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:bg-gray-700 dark:text-white"
-                                required
-                            >
-                                ${workoutOptionsHtml}
-                            </select>
-                        </div>
-                        <div>
-                            <label for="workoutExercise" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                                Exercício
-                            </label>
-                            <select
-                                id="workoutExercise"
-                                name="workoutExercise"
-                                class="mt-1 block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:bg-gray-700 dark:text-white"
-                                ${exerciseSelectDisabled}
-                            >
-                                ${exerciseOptionsHtml}
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                                Máquinas
-                            </label>
-                            <div id="machinesBox" class="mt-1 block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white min-h-[80px] overflow-auto">
-                                ${initialMachinesHtml}
-                            </div>
-                        </div>
-                        <div>
-                            <label for="workoutDescription" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                                Descrição (Exercícios e Repetições Sugeridas)
-                            </label>
-                            <textarea
-                                id="workoutDescription"
-                                name="workoutDescription"
-                                rows="10"
-                                class="mt-1 block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:bg-gray-700 dark:text-white"
-                                placeholder="Ex: Agachamento 3x10, Leg Press 4x12..."
-                            >${initialDescription}</textarea>
-                        </div>
-                        <div class="flex justify-end space-x-4">
-                            <button type="button" id="cancel-workout-btn" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
-                                Cancelar
-                            </button>
-                            <button type="submit" id="save-workout-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
-                                ${editingWorkout ? 'Salvar Alterações' : 'Adicionar Treino'}
-                            </button>
-                        </div>
-                    </form>
-                `;
-                // Pass closeWorkoutModal as the closeCallback
-                renderModal(isWorkoutModalOpen, title, contentHtml, closeWorkoutModal);
+                const title = editingWorkout ? 'Editar Treino' : `Adicionar Treino para ${daysOfWeekDisplay[daysOfWeekDisplay.findIndex(d => d.toLowerCase() === currentDay)]}`;
+                renderModal(isWorkoutModalOpen, title, _getWorkoutModalContentHtml(), closeWorkoutModal);
 
                 if (isWorkoutModalOpen) {
                     const workoutNameSelect = document.getElementById('workoutName');
@@ -1019,11 +645,12 @@
                     // Function to update exercise dropdown and machines box
                     function updateExerciseAndMachines(selectedWorkoutType, initialExerciseName = null) {
                         let exerciseOptionsHtml = '<option value="">Selecione o Exercício</option>';
-                        let machinesHtml = '<p class="text-gray-600 dark:text-gray-400 italic">Selecione o tipo de treino para ver as máquinas.</p>';
+                        let machinesHtml = '<p class="text-gray-400 italic">Selecione o tipo de treino para ver as máquinas.</p>';
 
                         const currentWorkoutDetail = workoutDetails[selectedWorkoutType];
 
                         if (currentWorkoutDetail && Array.isArray(currentWorkoutDetail.exercises)) {
+                            exerciseSelectDisabled = '';
                             currentWorkoutDetail.exercises.forEach(ex => {
                                 const selected = (initialExerciseName === ex.name) ? 'selected' : '';
                                 exerciseOptionsHtml += `<option value="${ex.name}" ${selected}>${ex.name}</option>`;
@@ -1031,13 +658,13 @@
                             workoutExerciseSelect.disabled = false;
 
                             if (currentWorkoutDetail.machines && Array.isArray(currentWorkoutDetail.machines) && currentWorkoutDetail.machines.length > 0) {
-                                machinesHtml = '<ul class="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">';
+                                machinesHtml = '<ul class="list-disc list-inside space-y-1 text-gray-300">';
                                 currentWorkoutDetail.machines.forEach(machine => {
                                     machinesHtml += `<li><span class="font-semibold">${machine.name}:</span> ${machine.description}</li>`;
                                 });
                                 machinesHtml += '</ul>';
                             } else {
-                                machinesHtml = '<p class="text-gray-600 dark:text-gray-400 italic">Nenhuma máquina específica listada para este treino.</p>';
+                                machinesHtml = '<p class="text-gray-400 italic">Nenhuma máquina específica listada para este treino.</p>';
                             }
                         } else {
                             workoutExerciseSelect.disabled = true;
@@ -1096,31 +723,7 @@
              */
             function renderDietModal() {
                 const title = "Sua Dieta Completa";
-                const contentHtml = `
-                    <form id="diet-form" class="space-y-6">
-                        <div>
-                            <label for="dietPlan" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                                Plano de Dieta
-                            </label>
-                            <textarea
-                                id="dietPlan"
-                                name="dietPlan"
-                                rows="10"
-                                class="mt-1 block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 text-gray-900 dark:bg-gray-700 dark:text-white"
-                                placeholder="Descreva sua dieta para a semana, refeição por refeição."
-                            >${diet}</textarea>
-                        </div>
-                        <div class="flex justify-end space-x-4">
-                            <button type="button" id="cancel-diet-btn" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
-                                Cancelar
-                            </button>
-                            <button type="submit" id="save-diet-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
-                                Salvar Dieta
-                            </button>
-                        </div>
-                    </form>
-                `;
-                renderModal(isDietModalOpen, title, contentHtml, closeDietModal); // Pass closeDietModal
+                renderModal(isDietModalOpen, title, _getDietModalContentHtml(), closeDietModal);
 
                 if (isDietModalOpen) {
                     document.getElementById('diet-form').onsubmit = handleSaveDiet;
@@ -1133,35 +736,7 @@
              */
             function renderWeightModal() {
                 const title = "Registrar Seu Peso";
-                const contentHtml = `
-                    <form id="weight-form" class="space-y-6">
-                        <div>
-                            <label for="newWeight" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                                Peso (kg)
-                            </label>
-                            <input
-                                type="number"
-                                id="newWeight"
-                                name="newWeight"
-                                step="0.1"
-                                min="0"
-                                value="${weight}"
-                                class="mt-1 block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 text-gray-900 dark:bg-gray-700 dark:text-white"
-                                placeholder="Ex: 75.5"
-                                required
-                            />
-                        </div>
-                        <div class="flex justify-end space-x-4">
-                            <button type="button" id="cancel-weight-btn" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
-                                Cancelar
-                            </button>
-                            <button type="submit" id="save-weight-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
-                                Salvar Peso
-                            </button>
-                        </div>
-                    </form>
-                `;
-                renderModal(isWeightModalOpen, title, contentHtml, closeWeightModal); // Pass closeWeightModal
+                renderModal(isWeightModalOpen, title, _getWeightModalContentHtml(), closeWeightModal);
 
                 if (isWeightModalOpen) {
                     document.getElementById('weight-form').onsubmit = handleSaveWeight;
@@ -1169,11 +744,37 @@
                 }
             }
 
+            // --- Main Render Function ---
+            /**
+             * Renders the appropriate screen based on the current user's authentication state.
+             */
+            function renderApp() {
+                if (!firebase || !auth || !db) {
+                    appRoot.innerHTML = `
+                        <div class="flex justify-center items-center h-full min-h-[300px] text-xl text-gray-400">
+                            Carregando Firebase SDK...
+                        </div>
+                    `;
+                    return;
+                }
+
+                if (!currentUser) {
+                    appRoot.innerHTML = _getAuthScreenHtml(isLoginMode);
+                } else {
+                    appRoot.innerHTML = _getMainAppContentHtml();
+                }
+                // Modals are rendered separately, not part of appRoot's innerHTML
+                renderWorkoutModal();
+                renderDietModal();
+                renderWeightModal();
+                renderConfirmationModal();
+            }
+
             // --- Initial Application Setup when DOM is ready ---
             window.onload = function() {
                 // Initial render of the loading screen
                 appRoot.innerHTML = `
-                    <div class="flex justify-center items-center h-full min-h-[300px] text-xl text-gray-700 dark:text-gray-300">
+                    <div class="flex justify-center items-center h-full min-h-[300px] text-xl text-gray-400">
                         Carregando aplicativo...
                     </div>
                 `;
